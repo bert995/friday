@@ -1,0 +1,16 @@
+{
+  "description": "Friday model bake-off — fixed prompts across translation / writing / speaking. Used to compare candidate brains on a 16GB Mac.",
+  "tests": [
+    { "id": "t1", "cat": "translate", "dir": "en->zh", "input": "Could you please follow up with the vendor and loop me in once you hear back?", "look_for": "business-email tone, natural Chinese (not literal)" },
+    { "id": "t2", "cat": "translate", "dir": "zh->en", "input": "这个项目下周要上线，但还有几个 bug 没修完，我有点担心。", "look_for": "natural workplace English, correct tense" },
+    { "id": "t3", "cat": "translate", "dir": "zh->en", "input": "他这个人刀子嘴豆腐心。", "look_for": "idiom handled idiomatically, not word-for-word" },
+    { "id": "t4", "cat": "translate", "dir": "en->zh", "input": "The model overfits on the training set, so we added dropout and early stopping.", "look_for": "correct technical terms (过拟合/dropout/早停)" },
+
+    { "id": "w1", "cat": "writing", "input": "I very like this movie, it make me feel happy.", "look_for": "fix grammar, give corrected version + why" },
+    { "id": "w2", "cat": "writing", "input": "I am writing to you for asking about the status of my application.", "look_for": "make it natural business English" },
+    { "id": "w3", "cat": "writing", "input": "Please kindly find the attached document and revert back to me asap.", "look_for": "spot redundancy / non-native phrasing (revert back, kindly)" },
+
+    { "id": "s1", "cat": "speaking", "input": "Um, I think the, the meeting is, how to say, not very useful for me because I cannot understand what they talk about.", "look_for": "idiomatic rephrase of a spoken sentence, encouraging tone" },
+    { "id": "s2", "cat": "speaking", "input": "I very like coffee but today I no drink because I sleep late and wake up late.", "look_for": "fix learner errors, suggest natural conversational version" }
+  ]
+}

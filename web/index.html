@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>周五</title>
+<!--
+  Visual design by claude design; wired to the Python bridge.
+  JS hooks Python calls (see pet/bridge.py): window.fridayPartial(text),
+  window.fridayClipboard(text). All actions go through window.pywebview.api.*.
+-->
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --orange: #EB924A; --orange-soft: #F8B872; --orange-deep: #C26A28;
+    --cream: #FBF1E2; --cream-2: #FBE4C5; --card: #FFFDF9;
+    --ink: #2A1810; --ink-2: #5A4030; --muted: #8A7159; --hair: #EFE2CB;
+    --green: #6A9B5E; --yellow: #C99425; --blue: #5B7FB8; --rose: #C76A6A;
+  }
+
+  html, body { height: 100%; background: transparent; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", "Helvetica Neue", sans-serif;
+    color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;        /* transparent window — only the pet shows */
+  }
+
+  /* ============ PET WINDOW — bottom-right of the transparent window ============ */
+  .friday {
+    position: fixed; right: 14px; bottom: 12px; width: 296px; z-index: 10;
+    user-select: none; display: flex; flex-direction: column; align-items: center;
+  }
+
+  /* ----- the cat (sits above the card) ----- */
+  .cat-stage {
+    width: 150px; height: 138px; z-index: 4; cursor: pointer; position: relative;
+    display: flex; align-items: flex-end; justify-content: center;
+    transition: transform 0.2s ease;
+  }
+  .cat-stage:hover { transform: translateY(-2px); }
+  .cat-stage::after {
+    content: ""; position: absolute; bottom: 8px; left: 50%;
+    width: 60px; height: 8px; background: rgba(180, 90, 30, 0.18);
+    border-radius: 50%; transform: translateX(-50%); filter: blur(6px);
+    z-index: -1; opacity: 0; transition: opacity 0.3s;
+  }
+  .friday:not(.open) .cat-stage::after { opacity: 1; }
+
+  .grip {
+    width: 36px; height: 4px; border-radius: 2px; background: rgba(58, 30, 10, 0.12);
+    margin: 8px auto 4px; position: relative; z-index: 3; opacity: 0; transition: opacity 0.3s;
+  }
+  .friday.open .grip { opacity: 1; }
+  .cat-stage img {
+    image-rendering: pixelated; image-rendering: crisp-edges; display: block;
+    filter: drop-shadow(0 6px 0 rgba(180, 90, 30, 0.08)) drop-shadow(0 12px 24px rgba(180, 90, 30, 0.18));
+    transition: opacity 0.18s ease; animation: catBob 4.2s ease-in-out infinite; pointer-events: none;
+  }
+  .cat-stage.is-thinking img { animation: catBob 2s ease-in-out infinite; }
+  .cat-stage.is-talking img  { animation: catTalk 0.5s ease-in-out infinite; }
+  .cat-stage.is-listening img{ animation: catBob 1.4s ease-in-out infinite; }
+  .cat-stage.is-sleeping img { animation: catSleep 5s ease-in-out infinite; }
+  @keyframes catBob  { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+  @keyframes catTalk { 0%,100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-2px) scale(1.015); } }
+  @keyframes catSleep{ 0%,100% { transform: translateY(0) scale(1,1); } 50% { transform: translateY(-1px) scale(1.01,0.99); } }
+
+  .zz {
+    position: absolute; top: 14px; right: 42px; font-size: 20px; color: var(--orange-deep);
+    opacity: 0; pointer-events: none; font-weight: 600; animation: zFly 3s ease-in-out infinite;
+  }
+  .cat-stage.is-sleeping ~ .zz { opacity: 1; }
+  @keyframes zFly {
+    0% { transform: translate(0,0) rotate(-8deg); opacity: 0; } 20% { opacity: 0.8; }
+    100% { transform: translate(14px,-28px) rotate(8deg); opacity: 0; }
+  }
+
+  .sound-waves { position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity 0.2s; }
+  .cat-stage.is-listening ~ .sound-waves { opacity: 1; }
+  .sound-waves .wave {
+    position: absolute; top: 78px; width: 14px; height: 14px;
+    border: 2px solid var(--orange); border-radius: 50%;
+    border-color: var(--orange) transparent transparent transparent; opacity: 0;
+    animation: waveOut 1.4s ease-out infinite;
+  }
+  .sound-waves .wave.left  { left: 88px; transform: scaleX(-1); }
+  .sound-waves .wave.right { right: 88px; }
+  .sound-waves .wave:nth-child(2) { animation-delay: 0.4s; }
+  .sound-waves .wave:nth-child(3) { animation-delay: 0.4s; }
+  .sound-waves .wave:nth-child(4) { animation-delay: 0.8s; }
+  @keyframes waveOut { 0% { transform: scale(0.6); opacity: 0; } 30% { opacity: 0.9; } 100% { transform: scale(2.4); opacity: 0; } }
+
+  .think-bubbles { position: absolute; top: 6px; left: calc(50% + 32px); width: 60px; height: 50px; pointer-events: none; opacity: 0; transition: opacity 0.2s; }
+  .cat-stage.is-thinking ~ .think-bubbles { opacity: 1; }
+  .think-bubbles .bub { position: absolute; background: white; border: 1.5px solid var(--orange); border-radius: 50%; animation: bubFloat 1.8s ease-in-out infinite; }
+  .think-bubbles .bub.b1 { width: 6px; height: 6px; bottom: 0; left: 4px; animation-delay: 0s; }
+  .think-bubbles .bub.b2 { width: 10px; height: 10px; bottom: 12px; left: 14px; animation-delay: 0.2s; }
+  .think-bubbles .bub.b3 { width: 16px; height: 16px; bottom: 26px; left: 28px; animation-delay: 0.4s; background: var(--card); }
+  @keyframes bubFloat { 0%,100% { transform: translateY(0); opacity: 0.4; } 50% { transform: translateY(-4px); opacity: 1; } }
+
+  /* ----- card open/close ----- */
+  .card-wrap {
+    width: 100%; max-height: 0; opacity: 0; margin-top: 0; overflow: visible; pointer-events: none;
+    transition: max-height 0.42s cubic-bezier(0.2,0.9,0.3,1.05), opacity 0.28s ease,
+      margin-top 0.42s cubic-bezier(0.2,0.9,0.3,1.05), transform 0.42s cubic-bezier(0.2,0.9,0.3,1.05);
+    transform: translateY(-8px) scale(0.96); transform-origin: top center;
+  }
+  .friday.open .card-wrap { max-height: 640px; opacity: 1; margin-top: -40px; transform: translateY(0) scale(1); pointer-events: auto; }
+
+  .card {
+    position: relative; background: var(--card); border-radius: 24px; padding: 46px 15px 14px;
+    box-shadow: 0 1px 0 rgba(255,255,255,0.9) inset, 0 2px 4px rgba(120,70,30,0.06), 0 24px 60px rgba(120,60,20,0.22);
+    border: 1px solid rgba(255,220,180,0.6);
+  }
+
+  .head { text-align: center; margin-bottom: 14px; }
+  .head .name { font-size: 17px; font-weight: 650; letter-spacing: 0.02em; color: var(--ink); }
+  .head .name::before {
+    content: ""; display: inline-block; width: 6px; height: 6px; border-radius: 50%;
+    background: var(--green); box-shadow: 0 0 0 3px rgba(106,155,94,0.18);
+    margin-right: 6px; transform: translateY(-2px); transition: background 0.3s, box-shadow 0.3s;
+  }
+  .head.is-thinking .name::before { background: var(--yellow); box-shadow: 0 0 0 3px rgba(201,148,37,0.2); }
+  .head.is-listening .name::before { background: var(--rose); box-shadow: 0 0 0 3px rgba(199,106,106,0.2); animation: pulse 1.2s infinite; }
+  .head.is-talking .name::before { background: var(--blue); box-shadow: 0 0 0 3px rgba(91,127,184,0.2); }
+  .head.is-sleeping .name::before { background: #B49684; box-shadow: 0 0 0 3px rgba(180,150,132,0.2); }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+  .head .state { font-size: 12px; color: var(--muted); margin-top: 3px; height: 14px; }
+
+  .tabs { display: flex; background: var(--cream); border-radius: 12px; padding: 4px; gap: 2px; margin-bottom: 14px; }
+  .tab { flex: 1; border: none; background: transparent; padding: 8px 0; border-radius: 9px; font-size: 13px; font-weight: 500; color: var(--muted); cursor: pointer; transition: all 0.18s ease; font-family: inherit; }
+  .tab:hover { color: var(--ink-2); }
+  .tab.active { background: var(--card); color: var(--ink); box-shadow: 0 1px 2px rgba(120,70,30,0.06), 0 2px 8px rgba(120,70,30,0.08); }
+
+  .panel { display: none; animation: panelIn 0.25s ease both; }
+  .panel.active { display: block; }
+  @keyframes panelIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+
+  .input-wrap { position: relative; background: var(--cream); border-radius: 14px; padding: 11px 12px 38px; transition: background 0.2s; }
+  .input-wrap:focus-within { background: #FFF5E2; box-shadow: 0 0 0 3px rgba(235,146,74,0.15); }
+  .input-wrap textarea { width: 100%; border: none; background: transparent; resize: none; outline: none; font-size: 13.5px; line-height: 1.55; color: var(--ink); font-family: inherit; min-height: 56px; max-height: 110px; }
+  .input-wrap textarea::placeholder { color: #B9A18A; }
+  .input-meta { position: absolute; left: 12px; bottom: 10px; font-size: 11px; color: var(--muted); }
+  .send-btn { position: absolute; right: 8px; bottom: 7px; height: 26px; padding: 0 12px 0 11px; border: none; border-radius: 13px; background: var(--ink); color: white; font-size: 12px; font-weight: 500; cursor: pointer; font-family: inherit; display: inline-flex; align-items: center; gap: 4px; transition: transform 0.1s, opacity 0.2s; }
+  .send-btn:hover { transform: translateY(-1px); }
+  .send-btn:active { transform: translateY(0); }
+  .send-btn:disabled { opacity: 0.35; cursor: not-allowed; transform: none; }
+  .send-btn .arrow { font-size: 14px; line-height: 1; margin-top: -1px; }
+
+  .mic-wrap { display: flex; flex-direction: column; align-items: center; padding: 8px 0 4px; }
+  .mic-btn { width: 72px; height: 72px; border-radius: 50%; border: none; background: linear-gradient(160deg, var(--orange-soft), var(--orange)); color: white; cursor: pointer; font-family: inherit; box-shadow: 0 6px 18px rgba(235,146,74,0.4), inset 0 -2px 0 rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.5); transition: transform 0.15s ease, box-shadow 0.2s ease; position: relative; display: flex; align-items: center; justify-content: center; }
+  .mic-btn:hover { transform: translateY(-2px) scale(1.03); }
+  .mic-btn:active { transform: translateY(0) scale(0.98); }
+  .mic-btn svg { width: 28px; height: 28px; }
+  .mic-btn.recording { background: linear-gradient(160deg, #E88B8B, #C24545); box-shadow: 0 6px 18px rgba(194,69,69,0.4), inset 0 -2px 0 rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.4); animation: micPulse 1.4s ease-in-out infinite; }
+  @keyframes micPulse { 0%,100% { box-shadow: 0 6px 18px rgba(194,69,69,0.4), inset 0 -2px 0 rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.4), 0 0 0 0 rgba(194,69,69,0.4); } 50% { box-shadow: 0 6px 18px rgba(194,69,69,0.5), inset 0 -2px 0 rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.4), 0 0 0 14px rgba(194,69,69,0); } }
+  .mic-label { margin-top: 10px; font-size: 12px; color: var(--muted); }
+  .mic-label .timer { font-variant-numeric: tabular-nums; color: var(--ink-2); margin-left: 4px; }
+
+  .transcript { margin-top: 10px; background: var(--cream); border-radius: 12px; padding: 10px 12px; font-size: 13px; line-height: 1.55; color: var(--ink-2); min-height: 38px; display: none; }
+  .transcript.show { display: block; animation: panelIn 0.25s ease; }
+  .transcript .caret { display: inline-block; width: 2px; height: 14px; background: var(--orange); vertical-align: middle; margin-left: 2px; animation: blink 0.9s steps(2) infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+  .transcript .placeholder { color: #B9A18A; font-style: italic; }
+
+  .result { margin-top: 12px; background: linear-gradient(180deg, #FFF8EC 0%, #FBF1E2 100%); border-radius: 16px; padding: 12px 12px 13px; position: relative; border: 1px solid rgba(235,146,74,0.12); display: none; max-height: 190px; overflow-y: auto; }
+  .result.show { display: block; animation: bubblePop 0.45s cubic-bezier(0.2,1.4,0.4,1) both; }
+  @keyframes bubblePop { from { transform: translateY(8px) scale(0.95); opacity: 0; } to { transform: translateY(0) scale(1); opacity: 1; } }
+  .result::before { content: ""; position: absolute; top: -7px; left: 28px; width: 14px; height: 14px; background: linear-gradient(135deg, #FFF8EC 50%, transparent 50%); border-left: 1px solid rgba(235,146,74,0.12); border-top: 1px solid rgba(235,146,74,0.12); transform: rotate(45deg); }
+  .copy-btn { position: absolute; top: 8px; right: 8px; background: rgba(255,255,255,0.6); border: 1px solid rgba(235,146,74,0.18); border-radius: 8px; padding: 4px 8px; font-size: 11px; color: var(--ink-2); cursor: pointer; font-family: inherit; display: inline-flex; align-items: center; gap: 4px; transition: all 0.15s; }
+  .copy-btn:hover { background: white; color: var(--orange-deep); }
+  .copy-btn.copied { background: var(--green); color: white; border-color: transparent; }
+  .copy-btn:disabled { opacity: 0.4; cursor: default; }
+  .r-text { font-size: 13px; line-height: 1.6; color: var(--ink); white-space: pre-wrap; padding-right: 52px; }
+
+  .foot { margin-top: 12px; display: flex; align-items: center; justify-content: space-between; padding: 0 4px; }
+  .foot .left { display: flex; align-items: center; gap: 7px; font-size: 12px; color: var(--muted); position: relative; }
+  .foot .left svg { width: 12px; height: 12px; opacity: 0.7; }
+  .switch { position: relative; width: 30px; height: 17px; background: #E4D3BC; border-radius: 9px; cursor: pointer; transition: background 0.2s; }
+  .switch::after { content: ""; position: absolute; top: 2px; left: 2px; width: 13px; height: 13px; border-radius: 50%; background: white; box-shadow: 0 1px 3px rgba(0,0,0,0.15); transition: left 0.2s; }
+  .switch.on { background: var(--orange); }
+  .switch.on::after { left: 15px; }
+  .foot .icon-btns { display: flex; gap: 2px; }
+  .icon-btn { width: 24px; height: 24px; border: none; background: transparent; border-radius: 6px; color: var(--muted); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.15s, color 0.15s; }
+  .icon-btn:hover { background: var(--cream); color: var(--ink-2); }
+  .icon-btn svg { width: 14px; height: 14px; }
+
+  .toast { position: absolute; bottom: 100%; left: 0; transform: translateY(-8px); background: var(--ink); color: white; font-size: 11px; padding: 5px 10px; border-radius: 6px; white-space: nowrap; opacity: 0; pointer-events: none; transition: opacity 0.25s, transform 0.25s; }
+  .toast.show { opacity: 1; transform: translateY(-4px); }
+</style>
+</head>
+<body>
+
+  <div class="friday open" id="friday">
+    <div class="cat-stage is-idle" id="catStage" title="点一下展开 / 收起">
+      <img id="catImg" src="assets/cat/idle.png" alt="周五">
+    </div>
+    <div class="zz" id="zz">z</div>
+    <div class="sound-waves">
+      <span class="wave left"></span><span class="wave right"></span>
+      <span class="wave left"></span><span class="wave right"></span>
+    </div>
+    <div class="think-bubbles">
+      <span class="bub b1"></span><span class="bub b2"></span><span class="bub b3"></span>
+    </div>
+
+    <div class="card-wrap" id="cardWrap">
+      <div class="grip"></div>
+      <div class="card">
+        <div class="head" id="head">
+          <div class="name">周五</div>
+          <div class="state" id="stateText">陪你练英语 · 随时叫我</div>
+        </div>
+
+        <div class="tabs" id="tabs">
+          <button class="tab active" data-tab="translate">翻译</button>
+          <button class="tab" data-tab="write">写作</button>
+          <button class="tab" data-tab="speak">口语</button>
+        </div>
+
+        <div class="panel active" data-panel="translate">
+          <div class="input-wrap">
+            <textarea id="ta-translate" placeholder="中英互译，丢点句子给周五吧～"></textarea>
+            <div class="input-meta"><span id="count-translate">0</span> / 500</div>
+            <button class="send-btn" data-go="translate" disabled><span>请周五看看</span><span class="arrow">↑</span></button>
+          </div>
+        </div>
+
+        <div class="panel" data-panel="write">
+          <div class="input-wrap">
+            <textarea id="ta-write" placeholder="贴一段你写的英文，周五帮你顺一顺～"></textarea>
+            <div class="input-meta"><span id="count-write">0</span> / 500</div>
+            <button class="send-btn" data-go="write" disabled><span>请周五看看</span><span class="arrow">↑</span></button>
+          </div>
+        </div>
+
+        <div class="panel" data-panel="speak">
+          <div class="mic-wrap">
+            <button class="mic-btn" id="micBtn" title="点击开始说话">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><line x1="12" y1="18" x2="12" y2="22"/>
+              </svg>
+            </button>
+            <div class="mic-label" id="micLabel">点一下，开口说英文</div>
+          </div>
+          <div class="transcript" id="transcript"><span class="placeholder">实时转写会出现在这里…</span></div>
+        </div>
+
+        <div class="result" id="result">
+          <button class="copy-btn" id="copyBtn" disabled>
+            <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>
+            <span>复制</span>
+          </button>
+          <div id="resultBody"></div>
+        </div>
+
+        <div class="foot">
+          <div class="left">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7l8 8 8-8"/></svg>
+            <span>划词翻译</span>
+            <div class="switch" id="clipSwitch"></div>
+            <div class="toast" id="toast">划词翻译已开启 · 复制(⌘C)即翻译</div>
+          </div>
+          <div class="icon-btns">
+            <button class="icon-btn" title="历史"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></button>
+            <button class="icon-btn" title="设置"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+  const api = () => (window.pywebview && window.pywebview.api) || null;
+  const escapeHtml = (s) => s.replace(/[&<>]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;' }[c]));
+
+  // ---------- state machine ----------
+  const STATES = ['idle','listening','thinking','talking','sleeping'];
+  const STATE_TEXT = { idle:'陪你练英语 · 随时叫我', listening:'正在听你说…', thinking:'周五在想…', talking:'看看这个～', sleeping:'困了，戳一下就醒' };
+  const CAT_HEIGHTS = { idle:138, listening:138, thinking:138, talking:138, sleeping:78 };
+  const catStage = $('catStage'), catImg = $('catImg'), head = $('head'), stateText = $('stateText');
+  let currentState = 'idle', idleTimer = null;
+  function setState(s) {
+    currentState = s;
+    STATES.forEach(x => { catStage.classList.remove('is-'+x); head.classList.remove('is-'+x); });
+    catStage.classList.add('is-'+s); head.classList.add('is-'+s);
+    catImg.src = 'assets/cat/'+s+'.png';
+    catImg.style.maxHeight = CAT_HEIGHTS[s]+'px';
+    stateText.textContent = STATE_TEXT[s];
+    if (idleTimer) clearTimeout(idleTimer);
+    if (s === 'idle') idleTimer = setTimeout(() => setState('sleeping'), 45000);
+  }
+  setState('idle');
+
+  // ---------- open / close ----------
+  const friday = $('friday');
+  const openCard = () => friday.classList.add('open');
+  // Distinguish a real click from a window-drag: easy_drag moves the window when
+  // you drag the cat, and that would otherwise fire a click and toggle the card.
+  let downX = 0, downY = 0;
+  catStage.addEventListener('mousedown', (e) => { downX = e.screenX; downY = e.screenY; });
+  catStage.addEventListener('click', (e) => {
+    if (Math.abs(e.screenX - downX) + Math.abs(e.screenY - downY) > 6) return; // was a drag
+    if (currentState === 'sleeping') { setState('idle'); openCard(); }
+    else friday.classList.toggle('open');
+  });
+
+  // ---------- tabs ----------
+  const tabs = document.querySelectorAll('.tab');
+  const panels = document.querySelectorAll('.panel');
+  function selectTab(name) {
+    tabs.forEach(x => x.classList.toggle('active', x.dataset.tab === name));
+    panels.forEach(p => p.classList.toggle('active', p.dataset.panel === name));
+    hideResult();
+  }
+  tabs.forEach(t => t.addEventListener('click', async () => {
+    if (t.dataset.tab !== 'speak') await silentStopIfRecording();
+    selectTab(t.dataset.tab);
+  }));
+
+  // ---------- result ----------
+  const result = $('result'), resultBody = $('resultBody'), copyBtn = $('copyBtn');
+  function renderResult(text) {
+    resultBody.innerHTML = '<div class="r-text">' + escapeHtml(text) + '</div>';
+    result.classList.add('show');
+    copyBtn.disabled = false;
+  }
+  function hideResult() { result.classList.remove('show'); copyBtn.disabled = true; }
+
+  // ---------- translate / write ----------
+  function wireInput(key) {
+    const ta = $('ta-'+key), count = $('count-'+key), btn = document.querySelector('.send-btn[data-go="'+key+'"]');
+    ta.addEventListener('input', () => { count.textContent = ta.value.length; btn.disabled = ta.value.trim().length === 0; });
+    ta.addEventListener('keydown', (e) => { if ((e.metaKey||e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); run(key, ta.value.trim()); } });
+    btn.addEventListener('click', () => run(key, ta.value.trim()));
+  }
+  wireInput('translate'); wireInput('write');
+
+  async function run(key, input) {
+    if (!input || !api()) return;
+    hideResult(); setState('thinking');
+    const fn = key === 'write' ? 'writing_suggest' : 'translate';
+    try {
+      const out = await api()[fn](input);
+      renderResult(out); setState('talking');
+      setTimeout(() => { if (currentState === 'talking') setState('idle'); }, 4000);
+    } catch (e) { renderResult('⚠️ 出错了：' + e + '\n（确认 oMLX 服务在运行）'); setState('idle'); }
+  }
+
+  // ---------- copy ----------
+  copyBtn.addEventListener('click', async () => {
+    const text = resultBody.innerText.trim();
+    if (!text || !api()) return;
+    if (await api().copy_output(text)) {
+      copyBtn.classList.add('copied'); copyBtn.querySelector('span').textContent = '已复制';
+      setTimeout(() => { copyBtn.classList.remove('copied'); copyBtn.querySelector('span').textContent = '复制'; }, 1400);
+    }
+  });
+
+  // ---------- mic / speak ----------
+  const micBtn = $('micBtn'), micLabel = $('micLabel'), transcript = $('transcript');
+  let recording = false, recTimer = null, recStart = 0;
+  const fmt = (s) => { const m = Math.floor(s/60), r = s%60; return m + ':' + (r<10?'0'+r:r); };
+
+  micBtn.addEventListener('click', async () => {
+    if (!api()) return;
+    if (!recording) {
+      const ok = await api().start_recording();
+      if (!ok) { micLabel.textContent = '麦克风打不开（检查系统权限）'; return; }
+      recording = true; micBtn.classList.add('recording'); micBtn.title = '停止';
+      transcript.classList.add('show'); transcript.innerHTML = '<span class="placeholder">听你说…</span><span class="caret"></span>';
+      recStart = Date.now(); setState('listening');
+      recTimer = setInterval(() => { const s = Math.floor((Date.now()-recStart)/1000); micLabel.innerHTML = '正在听… <span class="timer">'+fmt(s)+'</span> · 再点一下停止'; }, 250);
+    } else {
+      recording = false; micBtn.classList.remove('recording'); micBtn.title = '点击开始说话';
+      clearInterval(recTimer); micLabel.textContent = '点一下，开口说英文'; setState('thinking');
+      const r = await api().stop_recording();    // { transcript, feedback }
+      if (r && r.transcript) transcript.innerHTML = '🎙️ ' + escapeHtml(r.transcript);
+      else transcript.classList.remove('show');
+      renderResult((r && r.feedback) || '没听清，再说一遍试试～');
+      setState('talking'); setTimeout(() => { if (currentState === 'talking') setState('idle'); }, 4000);
+    }
+  });
+  async function silentStopIfRecording() {
+    if (!recording) return;
+    recording = false; micBtn.classList.remove('recording'); clearInterval(recTimer);
+    micLabel.textContent = '点一下，开口说英文'; transcript.classList.remove('show');
+    try { if (api()) await api().stop_recording(); } catch (e) {}
+    setState('idle');
+  }
+  // live partial transcription pushed from Python
+  window.fridayPartial = (text) => { if (recording) transcript.innerHTML = escapeHtml(text) + '<span class="caret"></span>'; };
+
+  // ---------- 划词翻译 toggle ----------
+  const clipSwitch = $('clipSwitch'), toast = $('toast');
+  clipSwitch.addEventListener('click', () => {
+    clipSwitch.classList.toggle('on');
+    const on = clipSwitch.classList.contains('on');
+    if (api()) api().set_clip_watch(on);
+    if (on) { toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 2200); }
+  });
+  // clipboard text grabbed by Python (watch or hotkey) -> fill + translate
+  window.fridayClipboard = (text) => {
+    openCard(); selectTab('translate');
+    const ta = $('ta-translate'); ta.value = text; $('count-translate').textContent = text.length;
+    document.querySelector('.send-btn[data-go="translate"]').disabled = false;
+    run('translate', text);
+  };
+</script>
+</body>
+</html>

@@ -1,0 +1,10 @@
+# Friday desktop app runtime deps.
+# Inference is NOT here — it runs in the local oMLX server (separate app).
+httpx>=0.27
+pywebview>=6.0      # transparent web-shell window (hosts web/index.html); pulls pyobjc on macOS
+sounddevice>=0.4    # microphone capture for speaking feedback
+numpy>=1.24
+pynput>=1.7         # global hotkey for clipboard translation
+
+# Legacy: the original PySide6/Qt UI (pet/app.py), superseded by the web shell.
+# PySide6>=6.6

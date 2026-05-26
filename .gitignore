@@ -1,0 +1,30 @@
+# --- secrets / local config (NEVER commit) ---
+.env
+*.local
+pet/secrets.py
+
+# --- python ---
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+
+# --- models & data (too big / user-specific) ---
+models/
+*.safetensors
+*.gguf
+
+# --- bench outputs ---
+bench/results*.md
+bench/results*.json
+
+# --- audio scratch ---
+*.wav
+tmp/
+
+# --- os / editor ---
+.DS_Store
+.idea/
+.vscode/
