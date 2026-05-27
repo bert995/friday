@@ -187,3 +187,24 @@ _Last updated: 2026-05-27_
   the ⌘⇧T hotkey.
 - README rewritten (was stale: parrot/PySide6/Qwen3-4B); now reflects the cat,
   the pywebview shell, Qwen3.5-4B, the build path, and Phase 2 done.
+
+## Update (2026-05-27, GitHub + landing site + 划词词典)
+
+- **On GitHub (public):** https://github.com/bert995/friday (branch `main`).
+  `gh` is authed as `bert995`.
+- **划词翻译 → dictionary card.** When 划词 grabs a single English word/short
+  phrase (no CJK, ≤3 words), Friday now shows a dictionary card — word + IPA +
+  词性 + 释义 + 例句 — instead of a sentence translation; sentences still
+  translate. `prompts.build_dict` / `brain.dict_lookup` (parses 5 labelled lines
+  into {word,ipa,pos,meaning,example}) / `bridge.Api.dict_lookup` / web
+  `renderDict` + `isWordLookup` routing. Verified over HTTP on Qwen3.5-4B.
+  Friday.app rebuilt to include it.
+- **Landing site → live.** `site/` (static index.html + cat sprites), adapted
+  from the provided design but corrected to the real app (Python+pywebview+local
+  oMLX/Qwen3.5-4B, Apple-Silicon-only, real GitHub links, honest shortcuts/FAQ),
+  plus a new **本地模型** section (how to install oMLX+Qwen3.5-4B and why it's
+  recommended). Deployed to **Cloudflare Pages** project `friday-site` via
+  `./deploy-site.sh` (wrangler, OAuth was already cached) → live at
+  https://friday-site.pages.dev — rendered + console-clean in a real browser.
+  **Pending (manual, dashboard):** attach custom domain `friday.bochen.uk`
+  (Pages → friday-site → Custom domains). See `SITE.md`.
