@@ -1,6 +1,6 @@
 # Friday — current status
 
-_Last updated: 2026-05-26_
+_Last updated: 2026-05-27_
 
 ## What's done
 
@@ -117,15 +117,45 @@ _Last updated: 2026-05-26_
 - Validated headlessly: inline JS passes `node --check`; `pet.shell` imports;
   bridge skills already verified. The live window needs the user's display.
 
-## What remains
+## Update (2026-05-26, first commit + UI tweaks)
 
-- Live run on the user's desktop: `./start.sh` (oMLX must be running). Verify the
-  transparent window, cat poke-out, animations, mic/streaming, 划词 toggle, copy.
-- Phase 3 polish: drag-to-move the window, autostart, history panel, optional TTS,
-  package as a real .app. (`pet/app.py` Qt version is now legacy/removable.)
+- **Committed** the initial version (`master`, "Initial commit — Friday …").
+- UI tweaks from live feedback: window 420×760 → **340×620**, card 360→296,
+  cat 168→138 (lighter/smaller); **drag-vs-click fixed** — dragging the cat to
+  move the window no longer toggles the card (>6px move = drag, ignored).
+- Confirmed: 划词翻译 ON → copy auto-translates (no manual send; `fridayClipboard`
+  calls `run`).
+
+## What remains (next, per user)
+
+- **Optimize translation quality** further (beyond the Qwen3-4B + improved prompt).
+- **Auto-start on login** (package/login-item).
+- Live-run verification of the compact window + drag fix on the user's desktop.
+- Maybe: window click-through on transparent areas; history panel; TTS.
 - Live run: grant mic + (for hotkey) Accessibility permission; verify the
   transparent window, drag, streaming transcription, 划词翻译 toggle.
 - True zero-keypress select-to-translate via macOS Accessibility AXSelectedText
   (current 划词 = clipboard-watch: select + ⌘C → auto-translate).
 - Phase 3 polish: cat expressions/animation, autostart, history, optional TTS,
   package as a real .app.
+
+## Update (2026-05-27, brain → Qwen3.5-4B)
+
+- **Translation shoot-out concluded.** After the Seed-X failure, evaluated
+  cloud Qwen-MT (rejected: not local) and a community ranking article. Final
+  short-list was **translategemma-4b** vs **Qwen3.5-4B**; the user chose
+  **Qwen3.5-4B** as the single brain for all three skills.
+  - translategemma is translate-only and, run raw via mlx_lm, spammed
+    `<end_of_turn>` ~150× after the (excellent) translation — extra integration
+    cost for one skill, so rejected.
+- **`pet/config.py`**: `MODEL` default is now `Qwen3.5-4B-4bit` (was
+  `Qwen3-4B-4bit`). Override still via `FRIDAY_MODEL`.
+- **Verified over HTTP on Qwen3.5-4B** (thinking off via `chat_template_kwargs`):
+  translate (ZH↔EN + idiom "half-baked" → "还不太成熟"), writing, speaking all
+  return clean output, **no `<think>` leak**.
+- oMLX re-discovery done (login → `/admin/api/reload`); served list now =
+  Qwen3-4B-4bit, Qwen3.5-4B-4bit, translategemma-4b-it-4bit, whisper.
+- **Disk:** Qwen3.5-4B-4bit (2.9G) + whisper (1.5G) are the keepers. The losing
+  models on disk — Qwen3-4B-4bit (2.1G, old brain) and translategemma-4b-it-4bit
+  (2.1G, rejected) — are cleanup candidates (disk only; RAM rule is about loaded
+  models, so this isn't stability-critical).

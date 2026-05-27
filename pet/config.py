@@ -15,8 +15,9 @@ from pathlib import Path
 # oMLX OpenAI-compatible endpoint
 BASE_URL = os.environ.get("FRIDAY_BASE_URL", "http://127.0.0.1:8000/v1")
 
-# The brain. Chosen via bake-off (see bench/). Override with FRIDAY_MODEL.
-MODEL = os.environ.get("FRIDAY_MODEL", "Qwen3-4B-4bit")
+# The brain. Chosen via bake-off + a translation shoot-out (see docs/status.md):
+# Qwen3.5-4B does all three skills well in one model. Override with FRIDAY_MODEL.
+MODEL = os.environ.get("FRIDAY_MODEL", "Qwen3.5-4B-4bit")
 
 # Optional stronger model for a future "high-quality mode". Empty by default:
 # Qwen3-8B was removed to keep a 16GB Mac comfortable (only one small model
