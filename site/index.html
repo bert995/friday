@@ -1,0 +1,1298 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>周五 · 陪你练英语的桌面小猫</title>
+<meta name="description" content="周五 / Friday 是一只常驻 macOS 桌面角落的橘色小猫，帮你中英互译、修英文、点评口语、划词查词。完全本地、免费、隐私——大脑跑在你自己电脑的 oMLX + Qwen3.5-4B 上。开源、MIT 协议。">
+<meta property="og:title" content="周五 · 陪你练英语的桌面小猫">
+<meta property="og:description" content="本地、免费、隐私的 macOS 桌面英语小猫：翻译 / 写作 / 口语 / 划词查词，全在你自己电脑上跑（oMLX + Qwen3.5-4B）。">
+<meta property="og:type" content="website">
+<meta property="og:image" content="assets/cat/idle.png">
+<link rel="icon" type="image/png" href="assets/cat/idle.png">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --orange: #EB924A;
+    --orange-soft: #F8B872;
+    --orange-deep: #C26A28;
+    --cream: #FBF1E2;
+    --cream-2: #FBE4C5;
+    --cream-3: #F4DCB6;
+    --card: #FFFDF9;
+    --ink: #2A1810;
+    --ink-2: #5A4030;
+    --muted: #8A7159;
+    --hair: #EFE2CB;
+    --green: #6A9B5E;
+    --yellow: #C99425;
+    --blue: #5B7FB8;
+    --rose: #C76A6A;
+    --line: rgba(58, 30, 10, 0.08);
+  }
+
+  html, body {
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", "Helvetica Neue", sans-serif;
+    color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+    background: #FBF6EE;
+    line-height: 1.55;
+    text-wrap: pretty;
+  }
+  img { display: block; }
+  button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }
+
+  .pixel { image-rendering: pixelated; image-rendering: crisp-edges; }
+
+  /* ============================================================ */
+  /* NAV                                                          */
+  /* ============================================================ */
+  .nav {
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(251, 246, 238, 0.78);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    border-bottom: 1px solid rgba(58, 30, 10, 0.06);
+  }
+  .nav-inner {
+    max-width: 1120px; margin: 0 auto;
+    padding: 14px 32px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .brand { display: flex; align-items: center; gap: 10px; }
+  .brand img { width: 30px; height: 30px; }
+  .brand .b-name { font-size: 16px; font-weight: 650; letter-spacing: 0.02em; }
+  .brand .b-name span { color: var(--muted); font-weight: 500; margin-left: 6px; font-size: 13px; }
+
+  .nav-links { display: flex; gap: 28px; font-size: 14px; color: var(--ink-2); }
+  .nav-links a { color: inherit; text-decoration: none; transition: color 0.15s; }
+  .nav-links a:hover { color: var(--orange-deep); }
+
+  .nav-cta {
+    background: var(--ink); color: white;
+    padding: 8px 14px; border-radius: 999px;
+    font-size: 13px; font-weight: 500;
+    display: inline-flex; align-items: center; gap: 6px;
+    transition: transform 0.12s, background 0.2s;
+  }
+  .nav-cta:hover { background: var(--orange-deep); transform: translateY(-1px); }
+  .nav-cta svg { width: 14px; height: 14px; }
+
+  /* inline code block for clone commands */
+  .clone {
+    display: inline-flex; align-items: center;
+    background: var(--ink);
+    color: #FBE4C5;
+    padding: 12px 14px 12px 16px;
+    border-radius: 14px;
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 13px;
+    box-shadow: 0 6px 16px rgba(58, 30, 10, 0.18);
+    gap: 12px;
+  }
+  .clone .dollar { color: var(--orange-soft); user-select: none; }
+  .clone .cmd { color: #FBE4C5; }
+  .clone .copy {
+    color: var(--muted);
+    background: rgba(255, 230, 200, 0.08);
+    border-radius: 6px;
+    padding: 4px 8px;
+    font-size: 11px;
+    transition: background 0.15s, color 0.15s;
+  }
+  .clone .copy:hover { background: rgba(255, 230, 200, 0.18); color: #FBE4C5; }
+  .clone .copy.copied { color: var(--orange-soft); }
+
+  /* ============================================================ */
+  /* SHARED                                                       */
+  /* ============================================================ */
+  section { padding: 96px 32px; }
+  .wrap { max-width: 1120px; margin: 0 auto; }
+
+  .eyebrow {
+    display: inline-block;
+    font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--orange-deep);
+    background: rgba(235, 146, 74, 0.12);
+    padding: 5px 11px; border-radius: 999px;
+    font-weight: 600;
+    margin-bottom: 18px;
+  }
+  .h1 {
+    font-size: 64px;
+    line-height: 1.05;
+    letter-spacing: -0.02em;
+    font-weight: 650;
+    margin-bottom: 22px;
+  }
+  .h2 {
+    font-size: 38px;
+    line-height: 1.15;
+    letter-spacing: -0.015em;
+    font-weight: 650;
+    margin-bottom: 14px;
+  }
+  .h3 {
+    font-size: 20px;
+    font-weight: 650;
+    letter-spacing: -0.005em;
+    margin-bottom: 8px;
+  }
+  .lead {
+    font-size: 18px;
+    color: var(--ink-2);
+    max-width: 560px;
+    line-height: 1.6;
+  }
+
+  /* ============================================================ */
+  /* HERO                                                         */
+  /* ============================================================ */
+  .hero {
+    padding-top: 72px; padding-bottom: 80px;
+    background:
+      radial-gradient(1100px 700px at 85% 30%, #FBE4C5 0%, transparent 60%),
+      radial-gradient(800px 600px at 10% 80%, #FFE9CC 0%, transparent 60%),
+      #FBF6EE;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero-inner {
+    max-width: 1120px; margin: 0 auto;
+    display: grid;
+    grid-template-columns: 1.2fr 1fr;
+    gap: 60px;
+    align-items: center;
+  }
+  .hero h1 .accent {
+    background: linear-gradient(120deg, var(--orange) 30%, var(--orange-deep) 90%);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .hero .lead { font-size: 19px; margin-bottom: 32px; }
+
+  .hero-ctas { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  .btn-primary {
+    background: var(--ink); color: white;
+    padding: 14px 22px 14px 18px;
+    border-radius: 14px;
+    font-size: 15px; font-weight: 550;
+    display: inline-flex; align-items: center; gap: 10px;
+    transition: transform 0.12s, background 0.2s, box-shadow 0.2s;
+    box-shadow: 0 6px 16px rgba(58, 30, 10, 0.18);
+  }
+  .btn-primary:hover { background: var(--orange-deep); transform: translateY(-2px); box-shadow: 0 10px 24px rgba(194, 106, 40, 0.3); }
+  .btn-primary svg { width: 18px; height: 18px; }
+  .btn-ghost {
+    color: var(--ink-2);
+    padding: 14px 18px;
+    font-size: 14px; font-weight: 500;
+    border-radius: 14px;
+    transition: background 0.18s;
+  }
+  .btn-ghost:hover { background: rgba(58, 30, 10, 0.05); }
+
+  .meta-line {
+    margin-top: 22px;
+    display: flex; gap: 18px; flex-wrap: wrap;
+    font-size: 13px; color: var(--muted);
+  }
+  .meta-line span { display: inline-flex; align-items: center; gap: 6px; }
+  .meta-line .dot { width: 4px; height: 4px; border-radius: 50%; background: var(--muted); }
+
+  /* hero scene — the friday window peeking out of a faux desktop */
+  .hero-scene {
+    position: relative;
+    aspect-ratio: 4 / 5;
+    border-radius: 28px;
+    background:
+      radial-gradient(circle at 30% 20%, #FFEAC9 0%, transparent 60%),
+      linear-gradient(165deg, #FBE4C2 0%, #F4C99A 60%, #E9B27A 100%);
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,0.5),
+      0 20px 60px rgba(180, 100, 40, 0.18),
+      0 2px 6px rgba(180, 100, 40, 0.06);
+    overflow: hidden;
+  }
+  /* faux scattered desktop icons */
+  .desk-icon {
+    position: absolute;
+    width: 38px; height: 38px;
+    border-radius: 9px;
+    background: linear-gradient(160deg, #fff, #f1d9b5);
+    box-shadow: inset 0 -2px 4px rgba(0,0,0,0.04), 0 3px 6px rgba(120,70,30,0.1);
+  }
+  .desk-icon.i1 { top: 24px; left: 24px; }
+  .desk-icon.i2 { top: 24px; left: 72px; }
+  .desk-icon.i3 { top: 72px; left: 24px; background: linear-gradient(160deg, #fff5e6, var(--orange-soft)); }
+  .desk-icon.i4 { top: 26px; right: 24px; background: linear-gradient(160deg, #e9f2e1, #b6cfa7); }
+  .desk-icon.i5 { top: 26px; right: 72px; }
+
+  .hero-window {
+    position: absolute;
+    right: 28px; bottom: 28px;
+    width: 320px;
+    z-index: 5;
+  }
+
+  /* ============================================================ */
+  /* MINI FRIDAY WINDOW (reused throughout)                       */
+  /* ============================================================ */
+  .mini {
+    width: 320px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .mini-cat {
+    width: 160px; height: 150px;
+    display: flex; align-items: flex-end; justify-content: center;
+    position: relative;
+    z-index: 3;
+  }
+  .mini-cat img {
+    height: 150px;
+    filter:
+      drop-shadow(0 5px 0 rgba(180, 90, 30, 0.08))
+      drop-shadow(0 10px 22px rgba(180, 90, 30, 0.18));
+    animation: catBob 4.2s ease-in-out infinite;
+  }
+  .mini-card {
+    background: var(--card);
+    width: 100%;
+    margin-top: -36px;
+    border-radius: 24px;
+    padding: 52px 16px 14px;
+    box-shadow:
+      0 1px 0 rgba(255,255,255,0.9) inset,
+      0 2px 4px rgba(120, 70, 30, 0.06),
+      0 20px 50px rgba(120, 60, 20, 0.18);
+    border: 1px solid rgba(255, 220, 180, 0.6);
+  }
+  .mini-card .grip {
+    width: 32px; height: 4px; border-radius: 2px;
+    background: rgba(58, 30, 10, 0.12);
+    margin: 0 auto 10px;
+  }
+  .mini-head { text-align: center; margin-bottom: 12px; }
+  .mini-head .nm {
+    font-size: 15px; font-weight: 650;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .mini-head .nm::before {
+    content: ""; width: 6px; height: 6px; border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 0 3px rgba(106, 155, 94, 0.18);
+  }
+  .mini-head .st { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+  .mini-tabs {
+    display: flex; background: var(--cream);
+    border-radius: 10px; padding: 3px; gap: 2px;
+    margin-bottom: 11px;
+  }
+  .mini-tabs .t {
+    flex: 1; padding: 6px 0; border-radius: 8px;
+    font-size: 12px; color: var(--muted); font-weight: 500;
+    text-align: center;
+  }
+  .mini-tabs .t.active {
+    background: var(--card); color: var(--ink);
+    box-shadow: 0 1px 2px rgba(120,70,30,0.06), 0 2px 6px rgba(120,70,30,0.08);
+  }
+
+  .mini-input {
+    background: var(--cream);
+    border-radius: 12px;
+    padding: 9px 11px 30px;
+    position: relative;
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: var(--ink);
+    min-height: 56px;
+  }
+  .mini-input.empty { color: #B9A18A; font-style: italic; }
+  .mini-input .send {
+    position: absolute; right: 6px; bottom: 6px;
+    background: var(--ink); color: white;
+    padding: 4px 10px;
+    border-radius: 11px;
+    font-size: 11px;
+    display: inline-flex; align-items: center; gap: 3px;
+  }
+  .mini-input .send.arrow::after {
+    content: "↑";
+    font-weight: bold;
+  }
+
+  .mini-result {
+    margin-top: 10px;
+    background: linear-gradient(180deg, #FFF8EC 0%, #FBF1E2 100%);
+    border-radius: 14px;
+    padding: 10px 11px;
+    border: 1px solid rgba(235, 146, 74, 0.12);
+    position: relative;
+  }
+  .mini-result::before {
+    content: "";
+    position: absolute;
+    top: -6px; left: 22px;
+    width: 12px; height: 12px;
+    background: linear-gradient(135deg, #FFF8EC 50%, transparent 50%);
+    border-left: 1px solid rgba(235, 146, 74, 0.12);
+    border-top: 1px solid rgba(235, 146, 74, 0.12);
+    transform: rotate(45deg);
+  }
+  .mini-result .rseg + .rseg { margin-top: 8px; padding-top: 8px; border-top: 1px dashed rgba(180, 120, 60, 0.18); }
+  .mini-result .lbl {
+    font-size: 11px; font-weight: 600; color: var(--ink-2);
+    margin-bottom: 3px;
+  }
+  .mini-result .txt {
+    font-size: 12.5px; line-height: 1.55;
+    color: var(--ink);
+  }
+  .mini-result .txt .strike { color: var(--muted); text-decoration: line-through; text-decoration-color: rgba(199,106,106,0.6); margin-right: 3px; }
+  .mini-result .txt .add { color: var(--green); font-weight: 500; }
+
+  @keyframes catBob {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-3px); }
+  }
+
+  /* ============================================================ */
+  /* SECTION: meet friday — 5 state frames                        */
+  /* ============================================================ */
+  .meet {
+    background: var(--card);
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+  }
+  .meet-head { text-align: center; margin-bottom: 56px; }
+  .meet-head .lead { margin: 0 auto; }
+
+  .states-row {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 24px;
+    align-items: end;
+  }
+  .state-card {
+    background: var(--cream);
+    border-radius: 22px;
+    padding: 26px 14px 22px;
+    text-align: center;
+    transition: transform 0.18s ease, box-shadow 0.18s ease;
+    cursor: pointer;
+    position: relative;
+  }
+  .state-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 16px 32px rgba(180, 100, 40, 0.16);
+  }
+  .state-card .frame {
+    height: 130px;
+    display: flex; align-items: flex-end; justify-content: center;
+    margin-bottom: 14px;
+  }
+  .state-card .frame img {
+    height: 130px;
+    filter: drop-shadow(0 4px 0 rgba(180, 90, 30, 0.06))
+            drop-shadow(0 8px 16px rgba(180, 90, 30, 0.16));
+  }
+  .state-card .frame img.sleeping-img { height: 78px; margin-bottom: 14px; }
+  .state-card .nm {
+    font-size: 15px; font-weight: 650;
+    margin-bottom: 4px;
+  }
+  .state-card .desc {
+    font-size: 12px; color: var(--muted);
+    line-height: 1.5;
+  }
+  .state-card .tag {
+    position: absolute;
+    top: 12px; right: 12px;
+    font-size: 9px; letter-spacing: 0.1em;
+    color: var(--orange-deep);
+    background: rgba(255,255,255,0.7);
+    padding: 2px 7px; border-radius: 999px;
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    text-transform: lowercase;
+  }
+
+  /* ============================================================ */
+  /* SECTION: features (translate/write/speak)                    */
+  /* ============================================================ */
+  .features { padding-top: 100px; }
+  .features-head { text-align: center; margin-bottom: 64px; }
+  .features-head .lead { margin: 0 auto; }
+
+  .feature {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 64px;
+    align-items: center;
+    margin-bottom: 100px;
+  }
+  .feature:last-child { margin-bottom: 0; }
+  .feature.reverse { direction: rtl; }
+  .feature.reverse > * { direction: ltr; }
+
+  .feature-text .num {
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 12px;
+    color: var(--orange-deep);
+    letter-spacing: 0.18em;
+    margin-bottom: 14px;
+  }
+  .feature-text .lead { font-size: 16px; margin-top: 8px; margin-bottom: 22px; }
+  .feature-list {
+    list-style: none;
+    display: flex; flex-direction: column; gap: 14px;
+  }
+  .feature-list li {
+    display: flex; gap: 12px;
+    font-size: 14.5px; color: var(--ink-2);
+    line-height: 1.55;
+  }
+  .feature-list li::before {
+    content: ""; flex-shrink: 0;
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    background: var(--cream);
+    background-image: radial-gradient(circle at 50% 50%, var(--orange) 0%, var(--orange) 30%, transparent 32%);
+    margin-top: 1px;
+  }
+  .feature-list li strong { color: var(--ink); font-weight: 600; }
+
+  .feature-mock {
+    display: flex; justify-content: center;
+    padding: 40px 0;
+  }
+  .feature-mock-bg {
+    background:
+      radial-gradient(600px 400px at 50% 30%, #FFEAC9 0%, transparent 60%),
+      linear-gradient(160deg, #FBE4C5 0%, #F4C99A 100%);
+    border-radius: 28px;
+    padding: 36px 28px 28px;
+    position: relative;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.5);
+  }
+
+  /* speak panel mic */
+  .mic-wrap {
+    display: flex; flex-direction: column; align-items: center;
+    padding: 6px 0 2px;
+  }
+  .mic {
+    width: 64px; height: 64px;
+    border-radius: 50%;
+    background: linear-gradient(160deg, var(--orange-soft), var(--orange));
+    color: white;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 6px 18px rgba(235, 146, 74, 0.4),
+                inset 0 -2px 0 rgba(0,0,0,0.06),
+                inset 0 1px 0 rgba(255,255,255,0.5);
+  }
+  .mic.recording {
+    background: linear-gradient(160deg, #E88B8B, #C24545);
+    box-shadow: 0 6px 18px rgba(194, 69, 69, 0.4),
+                inset 0 -2px 0 rgba(0,0,0,0.06),
+                inset 0 1px 0 rgba(255,255,255,0.4);
+  }
+  .mic svg { width: 24px; height: 24px; }
+  .mic-label { font-size: 11px; color: var(--muted); margin-top: 8px; }
+  .mic-label .timer { font-variant-numeric: tabular-nums; color: var(--ink-2); margin-left: 3px; }
+
+  .transcript-mini {
+    margin-top: 8px;
+    background: var(--cream);
+    border-radius: 11px;
+    padding: 8px 10px;
+    font-size: 12px;
+    color: var(--ink-2);
+    line-height: 1.5;
+  }
+  .transcript-mini .caret {
+    display: inline-block; width: 2px; height: 12px;
+    background: var(--orange);
+    vertical-align: middle;
+    margin-left: 2px;
+  }
+
+  /* ============================================================ */
+  /* HOVER TRANSLATE                                              */
+  /* ============================================================ */
+  .hover-section {
+    background: var(--cream);
+  }
+  .hover-grid {
+    display: grid; grid-template-columns: 1fr 1.1fr;
+    gap: 60px; align-items: center;
+  }
+  .hover-demo {
+    background: white;
+    border-radius: 22px;
+    padding: 28px;
+    box-shadow: 0 1px 0 rgba(255,255,255,0.9) inset, 0 16px 40px rgba(120, 60, 20, 0.12);
+    position: relative;
+  }
+  .hover-demo .browser-bar {
+    display: flex; align-items: center; gap: 6px;
+    padding-bottom: 18px;
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 18px;
+  }
+  .browser-bar .dot { width: 10px; height: 10px; border-radius: 50%; background: #F4D7B2; }
+  .browser-bar .dot:nth-child(2) { background: #F8B872; }
+  .browser-bar .dot:nth-child(3) { background: #EB924A; }
+  .browser-bar .url {
+    margin-left: 12px;
+    background: var(--cream);
+    border-radius: 8px;
+    padding: 5px 12px;
+    font-size: 12px; color: var(--muted);
+    flex: 1;
+  }
+  .hover-demo .article {
+    font-size: 15px; line-height: 1.75; color: var(--ink);
+  }
+  .hover-demo .article .selected {
+    background: rgba(235, 146, 74, 0.22);
+    box-shadow: 0 0 0 1px rgba(235, 146, 74, 0.4);
+    border-radius: 3px;
+    padding: 1px 3px;
+    position: relative;
+  }
+  .hover-demo .popover {
+    position: absolute;
+    background: var(--card);
+    border-radius: 14px;
+    padding: 12px 14px;
+    box-shadow: 0 1px 0 rgba(255,255,255,0.9) inset, 0 12px 30px rgba(120, 60, 20, 0.2);
+    border: 1px solid rgba(235, 146, 74, 0.18);
+    width: 200px;
+    z-index: 5;
+  }
+  .hover-demo .popover::before {
+    content: ""; position: absolute; top: -6px; left: 24px;
+    width: 12px; height: 12px;
+    background: var(--card);
+    border-left: 1px solid rgba(235, 146, 74, 0.18);
+    border-top: 1px solid rgba(235, 146, 74, 0.18);
+    transform: rotate(45deg);
+  }
+  .pop-cat {
+    display: flex; align-items: center; gap: 8px;
+    margin-bottom: 8px;
+  }
+  .pop-cat img { height: 28px; }
+  .pop-cat .nm { font-size: 12px; font-weight: 600; color: var(--ink-2); }
+  .popover .word {
+    font-size: 14px; font-weight: 650; color: var(--ink);
+    margin-bottom: 2px;
+  }
+  .popover .pos { font-size: 10px; color: var(--muted); font-style: italic; margin-bottom: 6px; }
+  .popover .def { font-size: 12.5px; line-height: 1.5; color: var(--ink-2); }
+
+  /* ============================================================ */
+  /* LOCAL MODEL — why Qwen3.5-4B                                 */
+  /* ============================================================ */
+  .model { background: var(--card); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+  .model-head { text-align: center; margin-bottom: 12px; }
+  .model-head .lead { margin: 0 auto; }
+  .model-grid { display: grid; grid-template-columns: 1.05fr 1fr; gap: 48px; align-items: start; margin-top: 52px; }
+  .why-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .why-card { background: var(--cream); border: 1px solid var(--line); border-radius: 18px; padding: 20px 18px; }
+  .why-card .ic { font-size: 22px; margin-bottom: 9px; }
+  .why-card h4 { font-size: 14.5px; font-weight: 650; margin-bottom: 5px; color: var(--ink); }
+  .why-card p { font-size: 12.5px; color: var(--ink-2); line-height: 1.55; }
+  .install { background: var(--ink); color: #FBE4C5; border-radius: 24px; padding: 30px 28px; position: relative; overflow: hidden; }
+  .install::before { content: ""; position: absolute; right: -50px; top: -50px; width: 200px; height: 200px; background: radial-gradient(circle, rgba(235,146,74,0.22) 0%, transparent 70%); pointer-events: none; }
+  .install h3 { color: white; font-size: 19px; margin-bottom: 18px; font-weight: 650; position: relative; }
+  .install ol { list-style: none; counter-reset: step; display: flex; flex-direction: column; gap: 16px; position: relative; }
+  .install li { counter-increment: step; position: relative; padding-left: 36px; font-size: 14px; line-height: 1.55; color: rgba(251,228,197,0.9); }
+  .install li::before { content: counter(step); position: absolute; left: 0; top: -1px; width: 23px; height: 23px; border-radius: 50%; background: var(--orange); color: white; font-size: 12px; font-weight: 650; display: flex; align-items: center; justify-content: center; }
+  .install code { background: rgba(255,230,200,0.12); color: #FBE4C5; padding: 2px 7px; border-radius: 6px; font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12px; }
+  .install .modelid { display: block; margin-top: 7px; background: rgba(255,230,200,0.1); border-radius: 8px; padding: 8px 10px; font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 11.5px; color: #FBE4C5; word-break: break-all; }
+  .install a { color: var(--orange-soft); text-decoration: none; }
+  .install a:hover { text-decoration: underline; }
+  .install .tip { margin-top: 18px; padding-top: 16px; border-top: 1px solid rgba(251,228,197,0.14); font-size: 12.5px; color: rgba(251,228,197,0.7); line-height: 1.55; position: relative; }
+
+  /* ============================================================ */
+  /* HOW TO START — 3 steps                                       */
+  /* ============================================================ */
+  .start-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+    margin-top: 56px;
+  }
+  .step {
+    background: var(--card);
+    border-radius: 22px;
+    padding: 28px 24px;
+    border: 1px solid var(--line);
+  }
+  .step .n {
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 12px;
+    color: var(--orange-deep);
+    letter-spacing: 0.18em;
+    margin-bottom: 14px;
+  }
+  .step h3 { font-size: 18px; margin-bottom: 8px; font-weight: 650; }
+  .step p { font-size: 14px; color: var(--ink-2); line-height: 1.6; }
+
+  /* ============================================================ */
+  /* SHORTCUTS                                                    */
+  /* ============================================================ */
+  .shortcuts {
+    background: var(--ink);
+    color: #FBE4C5;
+    border-radius: 28px;
+    padding: 56px 48px;
+    margin-top: 64px;
+    position: relative;
+    overflow: hidden;
+  }
+  .shortcuts::before {
+    content: "";
+    position: absolute;
+    right: -60px; bottom: -60px;
+    width: 280px; height: 280px;
+    background: radial-gradient(circle, rgba(235, 146, 74, 0.25) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .shortcuts .sc-head { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 32px; position: relative; }
+  .shortcuts .h2 { color: white; margin-bottom: 6px; }
+  .shortcuts .sc-head .lead { color: rgba(251, 228, 197, 0.7); font-size: 15px; max-width: 380px; }
+  .shortcuts ul {
+    list-style: none;
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 14px 36px;
+    position: relative;
+  }
+  .shortcuts li {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 12px 0;
+    border-bottom: 1px solid rgba(251, 228, 197, 0.12);
+    font-size: 14.5px;
+  }
+  .shortcuts li .label { color: #FBE4C5; }
+  .kbd {
+    display: inline-flex; gap: 4px;
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 12px;
+  }
+  .kbd span {
+    background: rgba(255, 230, 200, 0.1);
+    border: 1px solid rgba(255, 230, 200, 0.2);
+    color: #FBE4C5;
+    padding: 3px 8px;
+    border-radius: 6px;
+    min-width: 22px; text-align: center;
+  }
+
+  /* ============================================================ */
+  /* FAQ                                                          */
+  /* ============================================================ */
+  .faq { background: var(--card); border-top: 1px solid var(--line); }
+  .faq-head { text-align: center; margin-bottom: 48px; }
+  .faq-list {
+    max-width: 720px; margin: 0 auto;
+    display: flex; flex-direction: column;
+    gap: 4px;
+  }
+  details {
+    background: var(--cream);
+    border-radius: 14px;
+    padding: 16px 20px;
+    transition: background 0.2s;
+  }
+  details[open] { background: #FFF5E2; }
+  details summary {
+    cursor: pointer;
+    font-size: 15.5px;
+    font-weight: 550;
+    color: var(--ink);
+    list-style: none;
+    display: flex; justify-content: space-between; align-items: center;
+    gap: 16px;
+  }
+  details summary::-webkit-details-marker { display: none; }
+  details summary::after {
+    content: "+";
+    font-size: 20px;
+    font-weight: 400;
+    color: var(--muted);
+    transition: transform 0.2s;
+    flex-shrink: 0;
+  }
+  details[open] summary::after { content: "−"; }
+  details .ans {
+    margin-top: 12px; padding-top: 12px;
+    border-top: 1px solid rgba(58, 30, 10, 0.06);
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--ink-2);
+  }
+
+  /* ============================================================ */
+  /* CTA bottom                                                   */
+  /* ============================================================ */
+  .cta {
+    background:
+      radial-gradient(circle at 50% 0%, #FFEAC9 0%, transparent 60%),
+      var(--cream);
+    text-align: center;
+    padding: 100px 32px;
+  }
+  .cta-cat {
+    height: 200px;
+    margin: 0 auto 24px;
+    display: flex; justify-content: center;
+    filter: drop-shadow(0 6px 0 rgba(180, 90, 30, 0.08))
+            drop-shadow(0 14px 28px rgba(180, 90, 30, 0.2));
+  }
+  .cta-cat img { height: 200px; animation: catBob 4s ease-in-out infinite; }
+  .cta .h2 { font-size: 44px; max-width: 640px; margin-left: auto; margin-right: auto; margin-bottom: 18px; }
+  .cta .lead { margin: 0 auto 32px; }
+
+  /* ============================================================ */
+  /* FOOTER                                                       */
+  /* ============================================================ */
+  footer {
+    padding: 36px 32px;
+    border-top: 1px solid var(--line);
+    background: var(--card);
+  }
+  .ft-inner {
+    max-width: 1120px; margin: 0 auto;
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 13px; color: var(--muted);
+  }
+  .ft-inner .left { display: flex; align-items: center; gap: 10px; }
+  .ft-inner .left img { width: 22px; height: 22px; }
+  .ft-inner .right { display: flex; gap: 24px; }
+  .ft-inner .right a { color: inherit; text-decoration: none; }
+  .ft-inner .right a:hover { color: var(--ink-2); }
+
+  /* ============================================================ */
+  /* RESPONSIVE                                                   */
+  /* ============================================================ */
+  @media (max-width: 900px) {
+    .h1 { font-size: 44px; }
+    .h2 { font-size: 30px; }
+    .hero-inner, .feature, .hover-grid, .model-grid { grid-template-columns: 1fr; gap: 40px; }
+    .feature.reverse { direction: ltr; }
+    .states-row { grid-template-columns: repeat(2, 1fr); }
+    .start-grid { grid-template-columns: 1fr; }
+    .shortcuts ul { grid-template-columns: 1fr; gap: 0; }
+    .shortcuts { padding: 36px 28px; }
+    section { padding: 64px 24px; }
+    .nav-links { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav">
+  <div class="nav-inner">
+    <div class="brand">
+      <img src="assets/cat/idle.png" alt="" class="pixel">
+      <div class="b-name">周五 <span>Friday</span></div>
+    </div>
+    <div class="nav-links">
+      <a href="#meet">关于周五</a>
+      <a href="#features">功能</a>
+      <a href="#hover">划词翻译</a>
+      <a href="#model">本地模型</a>
+      <a href="#start">怎么开始</a>
+      <a href="#faq">常见问题</a>
+    </div>
+    <a href="https://github.com/bert995/friday" class="nav-cta">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 .3C5.4.3 0 5.7 0 12.3c0 5.3 3.4 9.8 8.2 11.4.6.1.8-.3.8-.6v-2c-3.3.7-4-1.6-4-1.6-.6-1.4-1.4-1.8-1.4-1.8-1.1-.7.1-.7.1-.7 1.2.1 1.9 1.3 1.9 1.3 1.1 1.9 2.9 1.3 3.6 1 .1-.8.4-1.3.8-1.6-2.7-.3-5.5-1.3-5.5-5.9 0-1.3.5-2.4 1.3-3.2-.1-.3-.6-1.5.1-3.2 0 0 1-.3 3.3 1.2.9-.3 2-.4 3-.4s2.1.1 3 .4c2.3-1.6 3.3-1.2 3.3-1.2.6 1.7.2 2.9.1 3.2.8.8 1.3 1.9 1.3 3.2 0 4.6-2.8 5.6-5.5 5.9.4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6C20.6 22.1 24 17.6 24 12.3 24 5.7 18.6.3 12 .3z"/></svg>
+      GitHub
+    </a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-inner">
+    <div>
+      <div class="eyebrow">开源 · macOS 桌面宠物</div>
+      <h1 class="h1">桌面上多了只<br>橘色小猫，<br><span class="accent">陪你练英语。</span></h1>
+      <p class="lead">「周五」是一只常驻屏幕角落的橘色德文卷毛猫。点一下，它帮你翻译、修英文、点评口语；不点的时候，它就在桌面打盹。大脑跑在你自己 Mac 的本地小模型上——<strong>不联网、不花 API 钱、断网也能用</strong>。完全开源，clone 下来自己跑就行。</p>
+      <div class="hero-ctas">
+        <a href="https://github.com/bert995/friday" class="btn-primary">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 .3C5.4.3 0 5.7 0 12.3c0 5.3 3.4 9.8 8.2 11.4.6.1.8-.3.8-.6v-2c-3.3.7-4-1.6-4-1.6-.6-1.4-1.4-1.8-1.4-1.8-1.1-.7.1-.7.1-.7 1.2.1 1.9 1.3 1.9 1.3 1.1 1.9 2.9 1.3 3.6 1 .1-.8.4-1.3.8-1.6-2.7-.3-5.5-1.3-5.5-5.9 0-1.3.5-2.4 1.3-3.2-.1-.3-.6-1.5.1-3.2 0 0 1-.3 3.3 1.2.9-.3 2-.4 3-.4s2.1.1 3 .4c2.3-1.6 3.3-1.2 3.3-1.2.6 1.7.2 2.9.1 3.2.8.8 1.3 1.9 1.3 3.2 0 4.6-2.8 5.6-5.5 5.9.4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6C20.6 22.1 24 17.6 24 12.3 24 5.7 18.6.3 12 .3z"/></svg>
+          在 GitHub 上查看源码
+        </a>
+        <a href="#start" class="btn-ghost">怎么自己跑起来 →</a>
+      </div>
+      <div class="meta-line">
+        <span>MIT 协议</span>
+        <span class="dot"></span>
+        <span>macOS 11 +</span>
+        <span class="dot"></span>
+        <span>Apple Silicon（M 系列）</span>
+        <span class="dot"></span>
+        <span>100% 本地运行</span>
+      </div>
+    </div>
+
+    <div class="hero-scene">
+      <div class="desk-icon i1"></div>
+      <div class="desk-icon i2"></div>
+      <div class="desk-icon i3"></div>
+      <div class="desk-icon i4"></div>
+      <div class="desk-icon i5"></div>
+
+      <!-- the live mini pet sitting at the corner -->
+      <div class="hero-window">
+        <div class="mini">
+          <div class="mini-cat">
+            <img src="assets/cat/talking.png" alt="周五" class="pixel">
+          </div>
+          <div class="mini-card">
+            <div class="grip"></div>
+            <div class="mini-head">
+              <div class="nm">周五</div>
+              <div class="st">看看这个～</div>
+            </div>
+            <div class="mini-tabs">
+              <div class="t">翻译</div>
+              <div class="t active">写作</div>
+              <div class="t">口语</div>
+            </div>
+            <div class="mini-input">I am very happy to receive your email yesterday.<span class="send arrow"></span></div>
+            <div class="mini-result">
+              <div class="rseg">
+                <div class="lbl">✅ 修改后</div>
+                <div class="txt"><span class="strike">I am</span><span class="add">I was</span> very <span class="strike">happy</span><span class="add">glad</span> to receive your email yesterday.</div>
+              </div>
+              <div class="rseg">
+                <div class="lbl">💡 说明</div>
+                <div class="txt">"yesterday" 是过去时间，be 动词要用过去式。</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- MEET FRIDAY -->
+<section id="meet" class="meet">
+  <div class="wrap">
+    <div class="meet-head">
+      <div class="eyebrow">关于周五</div>
+      <h2 class="h2">五种状态，一只活的小猫</h2>
+      <p class="lead">名字取自鲁滨逊的伙伴 Friday——意思是"会一直陪着你的小伙伴"。它不是冰冷的工具栏图标，是一只会眨眼、歪头、打鼾的小生物。</p>
+    </div>
+
+    <div class="states-row">
+      <div class="state-card">
+        <div class="tag">idle</div>
+        <div class="frame"><img src="assets/cat/idle.png" alt="" class="pixel"></div>
+        <div class="nm">待命</div>
+        <div class="desc">眨眼、偶尔歪头<br>等你随时叫它</div>
+      </div>
+      <div class="state-card">
+        <div class="tag">listening</div>
+        <div class="frame"><img src="assets/cat/listening.png" alt="" class="pixel"></div>
+        <div class="nm">听你说</div>
+        <div class="desc">耳朵竖起来<br>四周飘出声波</div>
+      </div>
+      <div class="state-card">
+        <div class="tag">thinking</div>
+        <div class="frame"><img src="assets/cat/thinking.png" alt="" class="pixel"></div>
+        <div class="nm">思考中</div>
+        <div class="desc">头顶冒小泡泡<br>处理你的内容</div>
+      </div>
+      <div class="state-card">
+        <div class="tag">talking</div>
+        <div class="frame"><img src="assets/cat/talking.png" alt="" class="pixel"></div>
+        <div class="nm">出结果</div>
+        <div class="desc">嘴一张一合<br>气泡弹出来</div>
+      </div>
+      <div class="state-card">
+        <div class="tag">sleeping</div>
+        <div class="frame"><img src="assets/cat/sleeping.png" alt="" class="pixel sleeping-img"></div>
+        <div class="nm">睡着了</div>
+        <div class="desc">长时间没动静<br>打鼾冒 Z，戳一下就醒</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section id="features" class="features">
+  <div class="wrap">
+    <div class="features-head">
+      <div class="eyebrow">三件事，一只猫全包</div>
+      <h2 class="h2">翻译 · 写作 · 口语</h2>
+      <p class="lead">不用切窗口、不用打开浏览器。看到什么、想说什么，直接交给桌面右下角那只小猫。</p>
+    </div>
+
+    <!-- Feature 1: Translate -->
+    <div class="feature">
+      <div class="feature-text">
+        <div class="num">01 / 翻译</div>
+        <h3 class="h2" style="font-size: 30px;">中英互译，地道不直译</h3>
+        <p class="lead">粘进中文或英文，周五自动判断方向，按意思翻成像母语者写出来的句子——不逐字硬翻。</p>
+        <ul class="feature-list">
+          <li><span><strong>✅ 自动识别方向</strong> — 中文进出英文、英文进出中文，不用手动选。</span></li>
+          <li><span><strong>🗣️ 地道优先</strong> — 调整语序、习语按意思翻，读起来自然顺口。</span></li>
+          <li><span><strong>🎯 忠实原意</strong> — 不增不减、不替你脑补，原文什么意思就翻什么。</span></li>
+          <li><span>结果右上角一键<strong>复制</strong>，粘哪都行。</span></li>
+        </ul>
+      </div>
+      <div class="feature-mock">
+        <div class="feature-mock-bg">
+          <div class="mini">
+            <div class="mini-cat"><img src="assets/cat/talking.png" alt="" class="pixel"></div>
+            <div class="mini-card">
+              <div class="grip"></div>
+              <div class="mini-head"><div class="nm">周五</div><div class="st">看看这个～</div></div>
+              <div class="mini-tabs"><div class="t active">翻译</div><div class="t">写作</div><div class="t">口语</div></div>
+              <div class="mini-input">这个功能下周上线，但还有点小问题。<span class="send arrow"></span></div>
+              <div class="mini-result">
+                <div class="rseg"><div class="lbl">✅ 翻译</div><div class="txt">This feature goes live next week, but there are still a few issues.</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Feature 2: Write -->
+    <div class="feature reverse">
+      <div class="feature-text">
+        <div class="num">02 / 写作</div>
+        <h3 class="h2" style="font-size: 30px;">英文写错了？周五帮你改</h3>
+        <p class="lead">把你写的英文贴进去——邮件也好、推文也好。周五给你高亮改动、解释原因，再来一个更顺的版本。</p>
+        <ul class="feature-list">
+          <li><span><strong>逐字 diff</strong> — 红色划掉的、绿色补上的，一眼能看明白改了什么。</span></li>
+          <li><span><strong>语法 + 选词</strong> 一起看，不只盯着 grammar。</span></li>
+          <li><span>同时给一句<strong>更地道的改写</strong>，可以学着用。</span></li>
+          <li><span>适合邮件、Slack、推特、英文文档。</span></li>
+        </ul>
+      </div>
+      <div class="feature-mock">
+        <div class="feature-mock-bg">
+          <div class="mini">
+            <div class="mini-cat"><img src="assets/cat/thinking.png" alt="" class="pixel"></div>
+            <div class="mini-card">
+              <div class="grip"></div>
+              <div class="mini-head"><div class="nm">周五</div><div class="st">周五在想…</div></div>
+              <div class="mini-tabs"><div class="t">翻译</div><div class="t active">写作</div><div class="t">口语</div></div>
+              <div class="mini-input">I am very happy to receive your email yesterday.<span class="send arrow"></span></div>
+              <div class="mini-result">
+                <div class="rseg"><div class="lbl">✅ 修改后</div><div class="txt"><span class="strike">I am</span><span class="add">I was</span> very <span class="strike">happy</span><span class="add">glad</span> to receive your email yesterday.</div></div>
+                <div class="rseg"><div class="lbl">💡 说明</div><div class="txt">"yesterday" 是过去时间，be 动词要用过去式 "was"；"glad" 在邮件里更得体。</div></div>
+                <div class="rseg"><div class="lbl">🗣️ 更自然</div><div class="txt">Thanks for your email yesterday — it really made my day!</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Feature 3: Speak -->
+    <div class="feature">
+      <div class="feature-text">
+        <div class="num">03 / 口语</div>
+        <h3 class="h2" style="font-size: 30px;">对着小猫开口，它会指出毛病</h3>
+        <p class="lead">点麦克风，对着周五说英文。说完它从文字层面点评语法和用词，再给你一个更自然的说法。</p>
+        <ul class="feature-list">
+          <li><span><strong>实时转写</strong> — 边说边出文字，知道它听到了啥。</span></li>
+          <li><span>录音中麦克风变成<strong>"停止"</strong>状态，再点一次结束。</span></li>
+          <li><span><strong>语法 + 用词</strong> 一起看，并给一句更自然的英文说法。</span></li>
+          <li><span>不评分、不打分，像朋友提醒你"刚才那句这样说更顺"。<br>（发音/口音是声学的，不在范围内。）</span></li>
+        </ul>
+      </div>
+      <div class="feature-mock">
+        <div class="feature-mock-bg">
+          <div class="mini">
+            <div class="mini-cat"><img src="assets/cat/listening.png" alt="" class="pixel"></div>
+            <div class="mini-card">
+              <div class="grip"></div>
+              <div class="mini-head"><div class="nm">周五</div><div class="st">正在听你说…</div></div>
+              <div class="mini-tabs"><div class="t">翻译</div><div class="t">写作</div><div class="t active">口语</div></div>
+              <div class="mic-wrap">
+                <div class="mic recording">
+                  <svg viewBox="0 0 24 24" fill="currentColor"><rect x="8" y="8" width="8" height="8" rx="1"/></svg>
+                </div>
+                <div class="mic-label">正在听… <span class="timer">0:04</span> · 再点一下停止</div>
+              </div>
+              <div class="transcript-mini">I want to going to the park tomorrow<span class="caret"></span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- HOVER TRANSLATE -->
+<section id="hover" class="hover-section">
+  <div class="wrap hover-grid">
+    <div>
+      <div class="eyebrow">还有一个小开关</div>
+      <h2 class="h2">划词翻译，<br>看哪个不懂划哪个</h2>
+      <p class="lead" style="margin-top: 8px;">在卡片底部打开"划词翻译"，任何窗口里选中英文，周五会从角落里探出头来，告诉你这个词什么意思、什么词性、怎么用。</p>
+      <ul class="feature-list" style="margin-top: 22px;">
+        <li><span>跨任意 macOS 应用，<strong>浏览器、PDF、IDE</strong> 都行。</span></li>
+        <li><span>弹出小气泡：<strong>词义 + 词性 + 例句</strong>。</span></li>
+        <li><span>不打扰阅读节奏，松开鼠标就消失。</span></li>
+        <li><span>不想用的时候，开关一关。</span></li>
+      </ul>
+    </div>
+
+    <div class="hover-demo">
+      <div class="browser-bar">
+        <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+        <div class="url">paulgraham.com / essay</div>
+      </div>
+      <div class="article">
+        One thing I always tell startups is to <span class="selected" id="selWord">resonate<div class="popover">
+          <div class="pop-cat">
+            <img src="assets/cat/talking.png" alt="" class="pixel">
+            <div class="nm">周五</div>
+          </div>
+          <div class="word">resonate</div>
+          <div class="pos">v. /ˈrezəneɪt/</div>
+          <div class="def">引起共鸣；让人产生共鸣。<br>例：The idea really <em>resonates</em> with users.</div>
+        </div></span> with their users. Build something that solves a real problem, and the rest follows.
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- LOCAL MODEL -->
+<section id="model" class="model">
+  <div class="wrap">
+    <div class="model-head">
+      <div class="eyebrow">本地小模型</div>
+      <h2 class="h2">周五的大脑，跑在你自己电脑里</h2>
+      <p class="lead">周五不调用任何云端 API。它通过本地的 <strong>oMLX</strong> 服务跑一个开源小模型——我们默认推荐 <strong>Qwen3.5-4B</strong>。装一次，之后所有翻译、点评都在你 Mac 上离线完成。</p>
+    </div>
+
+    <div class="model-grid">
+      <!-- why this model -->
+      <div>
+        <div class="why-cards">
+          <div class="why-card">
+            <div class="ic">🔒</div>
+            <h4>全本地 · 隐私</h4>
+            <p>你输入的句子只在自己 Mac 上处理，不联网、不上传、不拿去训练，断网也照常用。</p>
+          </div>
+          <div class="why-card">
+            <div class="ic">💸</div>
+            <h4>完全免费</h4>
+            <p>不用 OpenAI / Claude 的 API key，不按 token 计费——查多少词、改多少句都不花钱。</p>
+          </div>
+          <div class="why-card">
+            <div class="ic">🐈</div>
+            <h4>一只猫全包</h4>
+            <p>翻译、写作、口语点评、划词查词，同一个 Qwen3.5-4B 全搞定，不用来回切模型。</p>
+          </div>
+          <div class="why-card">
+            <div class="ic">🪶</div>
+            <h4>够轻 · 够干净</h4>
+            <p>4bit 量化约 2.9G，16G 内存的 Mac 也跑得顺；关掉「思维链」，直接给结果不啰嗦。</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- how to install -->
+      <div class="install">
+        <h3>三步把大脑装好</h3>
+        <ol>
+          <li>装 <strong>oMLX</strong>（本地推理服务）：到 <a href="https://github.com/jundot/omlx" target="_blank" rel="noopener">github.com/jundot/omlx</a> 下载并打开它。</li>
+          <li>在 oMLX 的模型管理里下这两个：
+            <span class="modelid">mlx-community/Qwen3.5-4B-4bit　· 大脑</span>
+            <span class="modelid">mlx-community/whisper-large-v3-turbo　· 语音转写</span>
+          </li>
+          <li>让 oMLX 服务跑起来（默认 <code>127.0.0.1:8000</code>）。周五会自动连上，并自动读取本地的 API key。</li>
+        </ol>
+        <div class="tip">想换模型？设一个 <code>FRIDAY_MODEL</code> 环境变量，就能换成 oMLX 里任何别的模型。16G 的 Mac 建议同一时间只加载一个模型——在 oMLX 里设个 <code>idle_timeout</code>，让闲置模型自动卸载。</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW TO START -->
+<section id="start">
+  <div class="wrap">
+    <div class="features-head">
+      <div class="eyebrow">怎么开始</div>
+      <h2 class="h2">三步，把周五放到你的桌面</h2>
+    </div>
+
+    <div class="start-grid">
+      <div class="step">
+        <div class="n">STEP 01</div>
+        <h3>装好本地大脑</h3>
+        <p>先按上面「<a href="#model" style="color: var(--orange-deep); text-decoration: none;">本地模型</a>」装好 oMLX，下好 Qwen3.5-4B + whisper，让 oMLX 服务跑起来。这是周五的大脑。</p>
+      </div>
+      <div class="step">
+        <div class="n">STEP 02</div>
+        <h3>Clone + 构建</h3>
+        <p>把周五拉下来，一句 <code style="background: var(--cream); padding: 1px 5px; border-radius: 4px; font-size: 12px;">./build.sh</code> 打出 <code style="background: var(--cream); padding: 1px 5px; border-radius: 4px; font-size: 12px;">Friday.app</code>。（想从源码直接跑：<code style="background: var(--cream); padding: 1px 5px; border-radius: 4px; font-size: 12px;">python3 -m pet.shell</code>）</p>
+        <div class="clone" style="margin-top: 14px; font-size: 11.5px;">
+          <span class="dollar">$</span>
+          <span class="cmd">git clone https://github.com/bert995/friday &amp;&amp; cd friday &amp;&amp; ./build.sh</span>
+        </div>
+      </div>
+      <div class="step">
+        <div class="n">STEP 03</div>
+        <h3>打开，猫就上桌了</h3>
+        <p>双击 <code style="background: var(--cream); padding: 1px 5px; border-radius: 4px; font-size: 12px;">dist/Friday.app</code>（或拖进「应用程序」）。第一次会问麦克风权限；想用划词快捷键，再去「辅助功能」勾上周五。UI、prompt 都在仓库里，随便改、欢迎 PR。</p>
+      </div>
+    </div>
+
+    <!-- SHORTCUTS -->
+    <div class="shortcuts">
+      <div class="sc-head">
+        <div>
+          <div class="eyebrow" style="color: var(--orange-soft); background: rgba(248, 184, 114, 0.15);">顺手操作</div>
+          <h2 class="h2">不打开卡片，也能使唤它</h2>
+          <p class="lead">目前内置一个全局快捷键，其余都是一眼就懂的小动作。快捷键定义在 <code style="background: rgba(255,230,200,0.1); padding: 1px 6px; border-radius: 4px; color: #FBE4C5;">pet/bridge.py</code> 里，想加随你改。</p>
+        </div>
+      </div>
+      <ul>
+        <li><span class="label">翻译 / 查词剪贴板里的内容</span><span class="kbd"><span>⌘</span><span>⇧</span><span>T</span></span></li>
+        <li><span class="label">划词：选中后复制即触发</span><span class="kbd"><span>⌘</span><span>C</span></span></li>
+        <li><span class="label">展开 / 收起卡片</span><span class="kbd"><span>点一下小猫</span></span></li>
+        <li><span class="label">开始 / 停止口语录音</span><span class="kbd"><span>点麦克风</span></span></li>
+        <li><span class="label">复制结果</span><span class="kbd"><span>结果右上角「复制」</span></span></li>
+        <li><span class="label">叫醒打盹的周五</span><span class="kbd"><span>戳一下</span></span></li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section id="faq" class="faq">
+  <div class="wrap">
+    <div class="faq-head">
+      <div class="eyebrow">常见问题</div>
+      <h2 class="h2">还有这些想问</h2>
+    </div>
+    <div class="faq-list">
+      <details open>
+        <summary>为什么不上架 App Store / 不发安装包？</summary>
+        <div class="ans">现阶段是个人项目，没精力去走苹果签名、公证、上架那一套。仓库里已经带了 <code style="background: var(--cream); padding: 1px 5px; border-radius: 4px; font-size: 12px;">build.sh</code>，clone 下来一句命令就能打出本地的 <code style="background: var(--cream); padding: 1px 5px; border-radius: 4px; font-size: 12px;">Friday.app</code> 双击用——代码透明、可改、不经过任何第三方。等用的人多了再考虑正式打包发布。</div>
+      </details>
+      <details>
+        <summary>我不会编程，怎么办？</summary>
+        <div class="ans">不算难：oMLX 是图形界面，点几下就能装好、下好模型；周五这边一句 <code style="background: var(--cream); padding: 1px 5px; border-radius: 4px; font-size: 12px;">./build.sh</code> 就出 app。跟着 README 一步步走基本能成，卡住了在 GitHub 提 issue。</div>
+      </details>
+      <details>
+        <summary>要准备 OpenAI / Claude 的 Key 吗？</summary>
+        <div class="ans">不用。周五完全跑在本地 oMLX 上，不调用任何云端大模型，也就不需要任何付费 API key。oMLX 自己的本地 key 周五会自动读取，你不用手动填。</div>
+      </details>
+      <details>
+        <summary>我的话会被上传到哪里？</summary>
+        <div class="ans">哪儿都不传。所有内容只在你自己 Mac 的 oMLX 上处理，不联网、不采集、不用于训练，断网也能用——代码里能看到全部网络调用，只有 <code style="background: var(--cream); padding: 1px 5px; border-radius: 4px; font-size: 12px;">127.0.0.1</code> 这一个本地地址。</div>
+      </details>
+      <details>
+        <summary>可以换成别的动物吗？</summary>
+        <div class="ans">能。资源都在 <code style="background: var(--cream); padding: 1px 5px; border-radius: 4px; font-size: 12px;">assets/cat/</code>，替成你自己画的 5 帧（idle/listening/thinking/talking/sleeping）就行。有人换成了柴犬、鹄鹅、肉抓龙。</div>
+      </details>
+      <details>
+        <summary>有 Windows / Linux 版吗？</summary>
+        <div class="ans">目前只有 macOS，而且需要 Apple Silicon（M 系列）芯片——因为本地推理用的是苹果的 MLX 框架，它是苹果芯片专属的。Intel Mac、Windows、Linux 暂时跑不了。</div>
+      </details>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section id="download" class="cta">
+  <div class="cta-cat"><img src="assets/cat/idle.png" alt="" class="pixel"></div>
+  <h2 class="h2">把它 clone 下来，<br>一起把英语练成顺手的事</h2>
+  <p class="lead">MIT 开源 · 现在还是个人项目 · 欢迎 PR 和 Star</p>
+
+  <div class="clone" style="margin: 8px auto 28px;">
+    <span class="dollar">$</span>
+    <span class="cmd">git clone https://github.com/bert995/friday &amp;&amp; cd friday &amp;&amp; ./build.sh</span>
+    <button class="copy" id="copyClone">复制</button>
+  </div>
+
+  <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
+    <a href="https://github.com/bert995/friday" class="btn-primary" id="dlBtn">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 .3C5.4.3 0 5.7 0 12.3c0 5.3 3.4 9.8 8.2 11.4.6.1.8-.3.8-.6v-2c-3.3.7-4-1.6-4-1.6-.6-1.4-1.4-1.8-1.4-1.8-1.1-.7.1-.7.1-.7 1.2.1 1.9 1.3 1.9 1.3 1.1 1.9 2.9 1.3 3.6 1 .1-.8.4-1.3.8-1.6-2.7-.3-5.5-1.3-5.5-5.9 0-1.3.5-2.4 1.3-3.2-.1-.3-.6-1.5.1-3.2 0 0 1-.3 3.3 1.2.9-.3 2-.4 3-.4s2.1.1 3 .4c2.3-1.6 3.3-1.2 3.3-1.2.6 1.7.2 2.9.1 3.2.8.8 1.3 1.9 1.3 3.2 0 4.6-2.8 5.6-5.5 5.9.4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6C20.6 22.1 24 17.6 24 12.3 24 5.7 18.6.3 12 .3z"/></svg>
+      在 GitHub 上查看仓库
+    </a>
+    <a href="#start" class="btn-ghost">完整运行说明 →</a>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="ft-inner">
+    <div class="left">
+      <img src="assets/cat/idle.png" alt="" class="pixel">
+      <span>周五 · 一只陪你练英语的桌面小猫 · © 2026</span>
+    </div>
+    <div class="right">
+      <a href="#faq">隐私</a>
+      <a href="https://github.com/bert995/friday/commits/main" target="_blank" rel="noopener">更新日志</a>
+      <a href="https://github.com/bert995/friday/issues" target="_blank" rel="noopener">提 issue</a>
+      <a href="https://github.com/bert995/friday" target="_blank" rel="noopener">GitHub</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+  // smooth scroll for nav anchors
+  document.querySelectorAll('a[href^="#"]').forEach(a => {
+    a.addEventListener('click', e => {
+      const id = a.getAttribute('href');
+      if (id.length < 2) return;
+      const el = document.querySelector(id);
+      if (!el) return;
+      e.preventDefault();
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  });
+
+  // tiny detail: cycle hero pet through 3 states to show life
+  const heroImg = document.querySelector('.hero-window .mini-cat img');
+  const heroState = document.querySelector('.hero-window .mini-head .st');
+  const heroCycle = [
+    { src: 'assets/cat/talking.png',   text: '看看这个～' },
+    { src: 'assets/cat/idle.png',      text: '陪你练英语 · 随时叫我' },
+    { src: 'assets/cat/thinking.png',  text: '周五在想…' },
+    { src: 'assets/cat/talking.png',   text: '看看这个～' }
+  ];
+  let hi = 0;
+  setInterval(() => {
+    hi = (hi + 1) % heroCycle.length;
+    if (heroImg) heroImg.src = heroCycle[hi].src;
+    if (heroState) heroState.textContent = heroCycle[hi].text;
+  }, 3200);
+
+  // copy clone command
+  document.getElementById('copyClone')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    const btn = e.currentTarget;
+    const cmd = btn.parentElement.querySelector('.cmd').textContent;
+    navigator.clipboard?.writeText(cmd).catch(()=>{});
+    btn.classList.add('copied');
+    btn.textContent = '已复制';
+    setTimeout(() => {
+      btn.classList.remove('copied');
+      btn.textContent = '复制';
+    }, 1400);
+  });
+</script>
+</body>
+</html>
