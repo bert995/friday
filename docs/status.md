@@ -155,7 +155,6 @@ _Last updated: 2026-05-27_
   return clean output, **no `<think>` leak**.
 - oMLX re-discovery done (login → `/admin/api/reload`); served list now =
   Qwen3-4B-4bit, Qwen3.5-4B-4bit, translategemma-4b-it-4bit, whisper.
-- **Disk:** Qwen3.5-4B-4bit (2.9G) + whisper (1.5G) are the keepers. The losing
-  models on disk — Qwen3-4B-4bit (2.1G, old brain) and translategemma-4b-it-4bit
-  (2.1G, rejected) — are cleanup candidates (disk only; RAM rule is about loaded
-  models, so this isn't stability-critical).
+- **Disk cleaned:** deleted the two losing models — Qwen3-4B-4bit (old brain)
+  and translategemma-4b-it-4bit (rejected). On-disk set is now exactly
+  Qwen3.5-4B-4bit (2.9G) + whisper (1.5G), ~4.4G total; served list matches.
