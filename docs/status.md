@@ -158,3 +158,32 @@ _Last updated: 2026-05-27_
 - **Disk cleaned:** deleted the two losing models — Qwen3-4B-4bit (old brain)
   and translategemma-4b-it-4bit (rejected). On-disk set is now exactly
   Qwen3.5-4B-4bit (2.9G) + whisper (1.5G), ~4.4G total; served list matches.
+
+## Update (2026-05-27, packaged as Friday.app)
+
+- **Friday is now a double-clickable macOS app.** PyInstaller build (scope:
+  "I can double-click + others can build", per the user — not signed/notarized).
+  New files (all committed so others can build from a clone):
+  - `app_main.py` — PyInstaller entry point (thin `from pet.shell import main`
+    wrapper; keeps `pet` importable as a package so relative imports work).
+  - `Friday.spec` — recipe. `collect_all` for webview/sounddevice/pynput
+    (pulls the PortAudio dylib + cocoa backend); bundles `web/` as data;
+    `BUNDLE` writes `Friday.app` with `assets/friday.icns`, id `uk.bochen.friday`,
+    and `NSMicrophoneUsageDescription` so the mic-permission prompt has a reason.
+  - `build.sh` — one command: venv → deps + pyinstaller → `dist/Friday.app` →
+    ad-hoc `codesign --sign -` (so Apple Silicon will launch it locally).
+  - `assets/friday.icns` — generated from `web/assets/cat/idle.png`
+    (sips: resampleHeight 860 → pad to 1024² transparent → iconset → iconutil).
+  - `pet/shell.py` — web path is now frozen-aware: `sys._MEIPASS/web` when
+    packaged, source tree otherwise.
+  - `.gitignore` — ignore `build/` + `dist/`.
+- **Verified:** build succeeds (arm64, ad-hoc signed); bundle has the binary,
+  icon, and `web/` (index.html + cat sprites); Info.plist keys correct; launched
+  the bundled binary — survived past imports into the window loop, only a benign
+  `_setDrawsTransparentBackground:` deprecation log. Bundle ≈ 28 MB.
+- **Caveats documented in README:** the brain (oMLX + Qwen3.5-4B, ~3 GB) is NOT
+  bundled — strangers must install oMLX + pull models first; Gatekeeper blocks
+  a *downloaded* unsigned app (right-click→Open once); Accessibility needed for
+  the ⌘⇧T hotkey.
+- README rewritten (was stale: parrot/PySide6/Qwen3-4B); now reflects the cat,
+  the pywebview shell, Qwen3.5-4B, the build path, and Phase 2 done.

@@ -20,6 +20,10 @@ models/
 bench/results*.md
 bench/results*.json
 
+# --- pyinstaller build outputs (the .app is built locally / per-release) ---
+build/
+dist/
+
 # --- audio scratch ---
 *.wav
 tmp/

@@ -6,6 +6,7 @@ Run:  python3 -m pet.shell   (from the repo root, inside the venv)
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 
 import webview
@@ -13,7 +14,13 @@ import webview
 from .bridge import Api
 
 WIN_W, WIN_H = 340, 620  # compact; card grows upward from the bottom-anchored cat
-WEB = Path(__file__).resolve().parent.parent / "web" / "index.html"
+
+# Locate web/index.html both when running from source and when frozen into
+# Friday.app (PyInstaller unpacks bundled data under sys._MEIPASS).
+if getattr(sys, "frozen", False):
+    WEB = Path(sys._MEIPASS) / "web" / "index.html"  # type: ignore[attr-defined]
+else:
+    WEB = Path(__file__).resolve().parent.parent / "web" / "index.html"
 
 
 def _corner_pos() -> tuple[int, int]:
