@@ -19,12 +19,21 @@ Cloudflare Pages project named `friday-site`.
 ./deploy-site.sh          # creates the project (first time) + uploads site/
 ```
 
-Then, **once**, in the Cloudflare dashboard:
+### Custom domain: friday.bochen.uk
 
-> Pages → `friday-site` → Custom domains → Set up a custom domain → `friday.bochen.uk`
+The domain is **already attached** to the `friday-site` project (added via the
+Cloudflare API, 2026-05-27 — it shows as `pending`). It only needs its DNS
+record, which couldn't be created from here because the cached wrangler OAuth
+token has `zone:read` but not `dns_records:write`.
 
-That's the only step that can't be scripted — it adds the CNAME and provisions
-the cert. After that, every `./deploy-site.sh` updates the live site.
+Add this one record in the Cloudflare dashboard (zone **bochen.uk** → DNS →
+Add record), then it goes active + provisions the cert automatically:
+
+| Type | Name | Target | Proxy |
+|------|--------|----------------------|-----------|
+| CNAME | `friday` | `friday-site.pages.dev` | Proxied (🟠 on) |
+
+After that, every `./deploy-site.sh` updates the live site.
 
 ## What the site claims (keep it true)
 
