@@ -41,6 +41,11 @@ class Api:
     def speak_feedback(self, text: str) -> str:
         return brain.speak_feedback(text)
 
+    def dict_lookup(self, word: str) -> dict:
+        """Dictionary card for a single word/phrase (划词翻译). Returns
+        {word, ipa, pos, meaning, example} — pywebview hands it to JS as an object."""
+        return brain.dict_lookup(word)
+
     # ---- JS -> Python: speaking with live transcription ----
     def start_recording(self) -> bool:
         try:

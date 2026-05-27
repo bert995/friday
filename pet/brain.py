@@ -50,3 +50,26 @@ def writing_suggest(text: str, *, model: str | None = None) -> str:
 def speak_feedback(transcript: str, *, model: str | None = None) -> str:
     """Idiomatic feedback on a transcribed spoken sentence (text-level only)."""
     return _chat(prompts.build_speaking(transcript), max_tokens=400, temperature=0.4, model=model)
+
+
+_DICT_LABELS = {"词": "word", "音标": "ipa", "词性": "pos", "释义": "meaning", "例句": "example"}
+
+
+def dict_lookup(word: str, *, model: str | None = None) -> dict:
+    """Look up ONE English word/phrase as a dictionary card (for 划词翻译).
+
+    Returns {word, ipa, pos, meaning, example}. Parsed from the model's five
+    labelled lines; falls back to putting the raw text in `meaning` if the
+    model strays from the format.
+    """
+    raw = _chat(prompts.build_dict(word), max_tokens=220, temperature=0.2, model=model)
+    fields = {"word": word.strip(), "ipa": "", "pos": "", "meaning": "", "example": ""}
+    for line in raw.splitlines():
+        line = line.strip()
+        for label, key in _DICT_LABELS.items():
+            if line.startswith(label + ":") or line.startswith(label + "："):
+                fields[key] = line.split("：", 1)[-1].split(":", 1)[-1].strip()
+                break
+    if not fields["meaning"]:
+        fields["meaning"] = raw.strip()
+    return fields

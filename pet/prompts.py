@@ -77,6 +77,26 @@ SPEAKING_SYSTEM = (
 )
 
 
+DICT_SYSTEM = (
+    "You are a concise English→Chinese dictionary for a Chinese learner. "
+    "The user gives ONE English word or short phrase. Reply with EXACTLY these "
+    "five lines and nothing else (no greetings, no extra commentary):\n"
+    "词: <the word or phrase, lowercased unless it's a proper noun>\n"
+    "音标: <IPA in slashes, e.g. /ˈrezəneɪt/ ; leave blank for a multi-word phrase>\n"
+    "词性: <part of speech, short form: n. / v. / adj. / adv. / phrase ...>\n"
+    "释义: <the core meaning in 简体中文, concise; separate multiple senses with ；>\n"
+    "例句: <ONE short, natural English sentence that uses the word>\n"
+    "The 释义 line must be Simplified Chinese; the 例句 line must be English."
+)
+
+
+def build_dict(word: str) -> list[Message]:
+    return [
+        {"role": "system", "content": DICT_SYSTEM},
+        {"role": "user", "content": word.strip()},
+    ]
+
+
 def build_translate(text: str) -> list[Message]:
     target = _target_language(text)
     return [

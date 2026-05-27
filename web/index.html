@@ -173,6 +173,14 @@
   .copy-btn:disabled { opacity: 0.4; cursor: default; }
   .r-text { font-size: 13px; line-height: 1.6; color: var(--ink); white-space: pre-wrap; padding-right: 52px; }
 
+  /* dictionary card (划词翻译 on a single word) */
+  .dict { padding-right: 52px; }
+  .dict-word { font-size: 16px; font-weight: 650; color: var(--ink); letter-spacing: 0.01em; }
+  .dict-pos { font-size: 11px; font-style: italic; color: var(--muted); margin-top: 1px; }
+  .dict-def { font-size: 13px; line-height: 1.55; color: var(--ink); margin-top: 7px; }
+  .dict-eg { font-size: 12.5px; line-height: 1.5; color: var(--ink-2); margin-top: 7px; padding-top: 7px; border-top: 1px dashed rgba(180,120,60,0.18); }
+  .dict-eg b { color: var(--orange-deep); font-weight: 600; }
+
   .foot { margin-top: 12px; display: flex; align-items: center; justify-content: space-between; padding: 0 4px; }
   .foot .left { display: flex; align-items: center; gap: 7px; font-size: 12px; color: var(--muted); position: relative; }
   .foot .left svg { width: 12px; height: 12px; opacity: 0.7; }
@@ -259,7 +267,7 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7l8 8 8-8"/></svg>
             <span>划词翻译</span>
             <div class="switch" id="clipSwitch"></div>
-            <div class="toast" id="toast">划词翻译已开启 · 复制(⌘C)即翻译</div>
+            <div class="toast" id="toast">已开启 · 复制(⌘C)：单词查词典 / 整句翻译</div>
           </div>
           <div class="icon-btns">
             <button class="icon-btn" title="历史"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></button>
@@ -327,6 +335,41 @@
     copyBtn.disabled = false;
   }
   function hideResult() { result.classList.remove('show'); copyBtn.disabled = true; }
+
+  // dictionary card for 划词 on a single word: {word, ipa, pos, meaning, example}
+  function renderDict(d) {
+    const word = (d.word || '').trim();
+    const posLine = [d.pos, d.ipa].filter(Boolean).join('  ');
+    let eg = escapeHtml(d.example || '');
+    if (word) {  // bold the looked-up word inside the example
+      eg = eg.replace(new RegExp('\\b(' + word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')\\b', 'ig'), '<b>$1</b>');
+    }
+    let html = '<div class="dict"><div class="dict-word">' + escapeHtml(word) + '</div>';
+    if (posLine) html += '<div class="dict-pos">' + escapeHtml(posLine) + '</div>';
+    if (d.meaning) html += '<div class="dict-def">' + escapeHtml(d.meaning) + '</div>';
+    if (d.example) html += '<div class="dict-eg">例：' + eg + '</div>';
+    html += '</div>';
+    resultBody.innerHTML = html;
+    result.classList.add('show');
+    copyBtn.disabled = false;
+  }
+
+  // a "word lookup" = short, no Chinese, ≤3 words with letters (vs a sentence to translate)
+  function isWordLookup(t) {
+    t = (t || '').trim();
+    if (!t || t.length > 40 || /[一-鿿]/.test(t)) return false;
+    if (t.split(/\s+/).filter(Boolean).length > 3) return false;
+    return /[A-Za-z]/.test(t);
+  }
+  async function lookupWord(word) {
+    if (!api()) return;
+    hideResult(); setState('thinking');
+    try {
+      const d = await api().dict_lookup(word.trim());
+      renderDict(d); setState('talking');
+      setTimeout(() => { if (currentState === 'talking') setState('idle'); }, 5000);
+    } catch (e) { renderResult('⚠️ 出错了：' + e + '\n（确认 oMLX 服务在运行）'); setState('idle'); }
+  }
 
   // ---------- translate / write ----------
   function wireInput(key) {
@@ -400,12 +443,14 @@
     if (api()) api().set_clip_watch(on);
     if (on) { toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 2200); }
   });
-  // clipboard text grabbed by Python (watch or hotkey) -> fill + translate
+  // clipboard text grabbed by Python (watch or hotkey):
+  // a single word/phrase -> dictionary card; a sentence -> translation.
   window.fridayClipboard = (text) => {
     openCard(); selectTab('translate');
     const ta = $('ta-translate'); ta.value = text; $('count-translate').textContent = text.length;
-    document.querySelector('.send-btn[data-go="translate"]').disabled = false;
-    run('translate', text);
+    document.querySelector('.send-btn[data-go="translate"]').disabled = text.trim().length === 0;
+    if (isWordLookup(text)) lookupWord(text);
+    else run('translate', text);
   };
 </script>
 </body>
